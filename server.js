@@ -8,9 +8,7 @@ const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.static(path.join(__dirname, "public")));
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
+
 // ── GAME DATA ────────────────────────────────────────────────────────────────
 const TOTAL = 30;
 const Q_STEPS = new Set([3,6,9,12,15,17,20,22,24,26,28]);
