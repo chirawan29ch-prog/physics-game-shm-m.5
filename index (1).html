@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>🗺️ ล่าขุมทรัพย์ฟิสิกส์</title>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Segoe UI',Sarabun,sans-serif;background:#080616;color:#EDE9FF;min-height:100vh;}
+  button{font-family:inherit;cursor:pointer;}
+  input{font-family:inherit;}
+  @keyframes bob{from{transform:translateY(0)}to{transform:translateY(-5px)}}
+  @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.75)}}
+  @keyframes fadein{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ── CONSTANTS ────────────────────────────────────────────────────────────────
+const TOTAL=30, COLS=6;
+const Q_STEPS=new Set([3,6,9,12,15,17,20,22,24,26,28]);
+const TRAPS=new Set([5,11,16,23,27]);
+const BOOSTS=new Set([7,13,19,25]);
+const QUESTIONS=[
+  {step:3, q:"การเคลื่อนที่แบบ SHM เกิดขึ้นเมื่อแรงลัพธ์เป็นอย่างไร?", ch:["คงที่ตลอดเวลา","แปรผันตรงกับการกระจัด พุ่งเข้าหาสมดุล","แปรผันตรงกับความเร็ว","เป็นศูนย์ตลอดเวลา"], ans:1, hint:"F = −kx แรงพุ่งเข้าหาสมดุลเสมอ", type:"ทฤษฎี"},
+  {step:6, q:"ลูกตุ้มเชือกยาว 40 cm แกว่งบนดาวที่ g = 4.9 m/s² คาบ T = ?", ch:["0.90 s","1.26 s","1.79 s","2.00 s"], ans:2, hint:"T = 2π√(L/g) = 2π√(0.4/4.9) ≈ 1.79 s", type:"คำนวณ"},
+  {step:9, q:"สปริง k = 400 N/m ติดมวล 1 kg ความถี่ f = ?", ch:["2.0 Hz","3.2 Hz","6.3 Hz","20.0 Hz"], ans:1, hint:"f = (1/2π)√(k/m) ≈ 3.18 Hz", type:"คำนวณ"},
+  {step:12, q:"ถ้าวัตถุเริ่มที่ตำแหน่งสมดุล กราฟ x(t) มีรูปแบบใด?", ch:["A cos(ωt)","A sin(ωt)","A tan(ωt)","เส้นตรง"], ans:1, hint:"เริ่มที่ x = 0 → x = A sin(ωt)", type:"ทฤษฎี"},
+  {step:15, q:"สปริง k = 500 N/m มวล 2 kg แอมพลิจูด 8 cm v_max = ?", ch:["0.63 m/s","1.26 m/s","2.00 m/s","4.00 m/s"], ans:1, hint:"v_max = A√(k/m) = 0.08×√250 ≈ 1.26 m/s", type:"คำนวณ"},
+  {step:17, q:"ณ ตำแหน่งใดที่พลังงานจลน์ = พลังงานศักย์ใน SHM?", ch:["ที่ x = 0","ที่ x = ±A","ที่ x = ±A/√2","ที่ x = ±A/2"], ans:2, hint:"½mv² = ½kx² → x = A/√2", type:"ทฤษฎี"},
+  {step:20, q:"มวล 0.4 kg สปริง k = 160 N/m แอมพลิจูด 6 cm a_max = ?", ch:["12 m/s²","24 m/s²","48 m/s²","96 m/s²"], ans:1, hint:"a_max = (k/m)·A = 400×0.06 = 24 m/s²", type:"คำนวณ"},
+  {step:22, q:"เพิ่มมวลที่ติดสปริงเป็น 4 เท่า คาบจะเปลี่ยนอย่างไร?", ch:["เพิ่มเป็น 2 เท่า","เพิ่มเป็น 4 เท่า","ลดเหลือครึ่งหนึ่ง","ไม่เปลี่ยนแปลง"], ans:0, hint:"T = 2π√(m/k) → m×4 → T×2", type:"ทฤษฎี"},
+  {step:24, q:"สปริง k = 300 N/m แอมพลิจูด 10 cm พลังงานกลรวม E = ?", ch:["0.75 J","1.50 J","3.00 J","6.00 J"], ans:1, hint:"E = ½kA² = ½×300×0.01 = 1.50 J", type:"คำนวณ"},
+  {step:26, q:"ตัดเชือกลูกตุ้มให้สั้นเหลือ 1/4 คาบจะเปลี่ยนอย่างไร?", ch:["ลดเหลือ 1/4","ลดเหลือ 1/2","เพิ่มเป็น 2 เท่า","ไม่เปลี่ยนแปลง"], ans:1, hint:"T = 2π√(L/g) → L×¼ → T×½", type:"ทฤษฎี"},
+  {step:28, q:"SHM แอมพลิจูด 10 cm ω = 5 rad/s ที่ x = 6 cm ความเร็ว v = ?", ch:["0.32 m/s","0.40 m/s","0.50 m/s","0.60 m/s"], ans:1, hint:"v = ω√(A²−x²) = 5×0.08 = 0.40 m/s", type:"คำนวณ"},
+];
+const FACES=["","⚀","⚁","⚂","⚃","⚄","⚅"];
+const C={bg:"#080616",panel:"#100C28",card:"#170F38",border:"#261952",
+  text:"#EDE9FF",sub:"#7B6BBF",yellow:"#FCD34D",green:"#10B981",red:"#EF4444",cyan:"#06B6D4"};
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+let socket,screen="landing",room=null,myId=null,role=null;
+let rolling=false,diceVal=null,pendingAnswerQ=null,showWin=false;
+let activeTab="join",joinCode="",joinName="",watchCode="";
+
+// ── SOCKET ───────────────────────────────────────────────────────────────────
+function initSocket(){
+  socket=io();
+  socket.on("room_created",({code})=>{room={code,status:"waiting",teams:{}};role="host";screen="host_lobby";render();});
+  socket.on("joined",({code,teamId})=>{myId=teamId;role="team";screen="team_lobby";render();});
+  socket.on("watching",({code,status})=>{role="host";screen=status==="playing"?"host_dashboard":"host_lobby";render();});
+  socket.on("room_update",(r)=>{
+    room=r;
+    if(role==="team"&&r.status==="playing"&&screen==="team_lobby"){screen="game";}
+    const me=room.teams[myId];
+    if(me&&me.pendingQ&&!pendingAnswerQ){pendingAnswerQ=QUESTIONS.find(q=>q.step===me.pendingQ);}
+    if(me&&!me.pendingQ){pendingAnswerQ=null;}
+    if(Object.values(r.teams).some(t=>t.finished))showWin=true;
+    render();
+  });
+  socket.on("game_started",()=>{screen=role==="host"?"host_dashboard":"game";render();});
+  socket.on("team_finished",({name,emoji})=>{showWin=true;render();});
+  socket.on("kicked",()=>{screen="landing";room=null;myId=null;showErr("คุณถูกครูนำออกจากห้อง");render();});
+  socket.on("err",(msg)=>{showErr(msg);});
+}
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+function showErr(msg){
+  const el=document.getElementById("errbar");
+  if(!el)return;
+  el.textContent="⚠️ "+msg;el.style.display="block";
+  setTimeout(()=>el.style.display="none",3000);
+}
+function h(tag,attrs,children){
+  const el=document.createElement(tag);
+  if(attrs)Object.entries(attrs).forEach(([k,v])=>{
+    if(k==="style"&&typeof v==="object")Object.assign(el.style,v);
+    else if(k.startsWith("on"))el.addEventListener(k.slice(2).toLowerCase(),v);
+    else el.setAttribute(k,v);
+  });
+  if(children)children.forEach(c=>{
+    if(c==null)return;
+    el.appendChild(typeof c==="string"?document.createTextNode(c):c);
+  });
+  return el;
+}
+function buildRows(){
+  const cells=Array.from({length:TOTAL},(_,i)=>i+1);
+  const rows=[];
+  for(let r=0;r<Math.ceil(TOTAL/COLS);r++){
+    const row=cells.slice(r*COLS,r*COLS+COLS);
+    rows.push(r%2===0?row:[...row].reverse());
+  }
+  return rows.reverse();
+}
+const ROWS=buildRows();
+
+// ── COMPONENTS ───────────────────────────────────────────────────────────────
+function makeBtn(label,onClick,color="#7C3AED",disabled=false,small=false){
+  const b=h("button",{
+    style:{background:disabled?C.card:`linear-gradient(135deg,${color},${color}bb)`,
+      border:"none",borderRadius:"11px",padding:small?"7px 18px":"12px 24px",
+      color:"#fff",fontSize:small?"12px":"14px",fontWeight:"700",
+      cursor:disabled?"not-allowed":"pointer",
+      boxShadow:disabled?"none":`0 4px 18px ${color}44`,
+      width:"100%",transition:"opacity .15s",opacity:disabled?"0.45":"1"},
+    onClick:disabled?null:onClick
+  },[label]);
+  return b;
+}
+function makeInp(value,onChange,placeholder){
+  const el=h("input",{
+    type:"text",value,placeholder,
+    style:{background:C.card,border:`1.5px solid ${C.border}`,borderRadius:"10px",
+      padding:"10px 14px",color:C.text,fontSize:"15px",outline:"none",width:"100%"}
+  });
+  el.addEventListener("input",e=>onChange(e.target.value));
+  return el;
+}
+function makeTag(text,color){
+  return h("span",{style:{background:color+"22",border:`1px solid ${color}55`,
+    borderRadius:"20px",padding:"2px 10px",fontSize:"11px",color,fontWeight:"700"}},[text]);
+}
+
+function makeCell(n,teams,small){
+  const isQ=Q_STEPS.has(n),isTrap=TRAPS.has(n),isBoost=BOOSTS.has(n),isGoal=n===TOTAL;
+  const here=teams.filter(t=>t.pos===n);
+  const sz=small?"40px":"52px";
+  let bg=C.card,border=`1px solid ${C.border}`;
+  if(isGoal){bg="#052E16";border=`2px solid ${C.green}`;}
+  else if(isQ){bg="#1A1756";border="1.5px solid #6366F1";}
+  else if(isTrap){bg="#250808";border=`1.5px solid ${C.red}66`;}
+  else if(isBoost){bg="#072214";border=`1.5px solid ${C.green}66`;}
+
+  const numEl=h("span",{style:{position:"absolute",top:"2px",left:"3px",fontSize:"8px",color:C.border}},[String(n)]);
+  let icon="";
+  if(isGoal)icon="🏆";
+  else if(isQ)icon="❓";
+  else if(isTrap)icon="💀";
+  else if(isBoost)icon="⭐";
+  const iconEl=icon?h("span",{style:{fontSize:small?"16px":"20px"}},[icon]):null;
+
+  const tokenWrap=h("div",{style:{position:"absolute",top:"-6px",right:"-6px",
+    display:"flex",flexWrap:"wrap",gap:"2px",maxWidth:"38px",justifyContent:"flex-end"}},[]);
+  here.slice(0,4).forEach(t=>{
+    const tok=h("div",{style:{width:"18px",height:"18px",borderRadius:"50%",
+      background:t.color,border:"2px solid #fff",display:"flex",alignItems:"center",
+      justifyContent:"center",fontSize:"10px",boxShadow:`0 0 7px ${t.color}`,
+      animation:"bob .7s ease infinite alternate"}},[t.emoji]);
+    tokenWrap.appendChild(tok);
+  });
+
+  const cell=h("div",{style:{position:"relative",width:sz,height:sz,background:bg,
+    border,borderRadius:"9px",display:"flex",alignItems:"center",
+    justifyContent:"center",flexShrink:"0"}},[numEl,iconEl,here.length>0?tokenWrap:null]);
+  return cell;
+}
+
+function makeBoard(teams,small){
+  const wrap=h("div",{style:{display:"flex",flexDirection:"column",gap:small?"3px":"4px"}},[]);
+  ROWS.forEach(row=>{
+    const rowEl=h("div",{style:{display:"flex",gap:small?"3px":"4px"}},[]);
+    row.forEach(n=>rowEl.appendChild(makeCell(n,teams,small)));
+    wrap.appendChild(rowEl);
+  });
+  return wrap;
+}
+
+function makeQModal(q,myColor){
+  let answered=false;
+  const overlay=h("div",{style:{position:"fixed",inset:"0",background:"#000000bb",
+    display:"flex",alignItems:"center",justifyContent:"center",zIndex:"300",padding:"16px"}},[]);
+
+  const box=h("div",{style:{background:`linear-gradient(145deg,#100C28,#170F38)`,
+    border:`2px solid ${myColor}`,borderRadius:"20px",padding:"24px 22px",
+    maxWidth:"480px",width:"100%",boxShadow:`0 0 50px ${myColor}44`,
+    animation:"fadein .3s ease"}},[]);
+
+  const tagRow=h("div",{style:{display:"flex",gap:"8px",marginBottom:"14px"}},[
+    makeTag(`❓ ช่องที่ ${q.step}`,myColor),
+    makeTag(q.type,q.type==="คำนวณ"?C.cyan:C.yellow)
+  ]);
+  const qText=h("p",{style:{color:C.text,fontSize:"15px",lineHeight:"1.75",margin:"0 0 18px"}},[q.q]);
+  const choicesWrap=h("div",{style:{display:"flex",flexDirection:"column",gap:"9px"}},[]);
+
+  q.ch.forEach((c,i)=>{
+    const btn=h("button",{
+      style:{background:C.card,border:`1.5px solid ${C.border}`,borderRadius:"10px",
+        padding:"10px 14px",color:C.text,fontSize:"14px",fontFamily:"Cambria,serif",
+        fontStyle:"italic",cursor:"pointer",textAlign:"left",
+        display:"flex",alignItems:"center",gap:"10px",width:"100%"},
+      onClick:()=>{
+        if(answered)return; answered=true;
+        const correct=i===q.ans;
+        // highlight
+        Array.from(choicesWrap.children).forEach((b,j)=>{
+          if(j===q.ans){Object.assign(b.style,{background:"#052E16",border:`2px solid ${C.green}`,color:"#6EE7B7"});}
+          else if(j===i&&!correct){Object.assign(b.style,{background:"#250808",border:`2px solid ${C.red}`,color:"#FCA5A5"});}
+        });
+        // hint
+        const hintEl=h("div",{style:{marginTop:"14px",background:"#061A10",
+          border:`1px solid ${C.green}44`,borderRadius:"9px",padding:"9px 13px",
+          fontSize:"12px",color:"#6EE7B7"}},[`💡 ${q.hint}`]);
+        box.appendChild(hintEl);
+        setTimeout(()=>{
+          socket.emit("answer_question",{code:room.code,answerIdx:i});
+          overlay.remove();
+          pendingAnswerQ=null;
+        },1100);
+      }
+    },[
+      h("span",{style:{width:"24px",height:"24px",borderRadius:"50%",background:C.border,
+        flexShrink:"0",display:"flex",alignItems:"center",justifyContent:"center",
+        fontSize:"11px",fontWeight:"700",color:C.sub,fontStyle:"normal"}},[String(i+1)]),
+      c
+    ]);
+    choicesWrap.appendChild(btn);
+  });
+
+  box.appendChild(tagRow);box.appendChild(qText);box.appendChild(choicesWrap);
+  overlay.appendChild(box);
+  return overlay;
+}
+
+function makeWinScreen(teams){
+  const fin=[...teams].filter(t=>t.finished).sort((a,b)=>a.finishedAt-b.finishedAt);
+  const overlay=h("div",{style:{position:"fixed",inset:"0",background:"#000000cc",
+    display:"flex",alignItems:"center",justifyContent:"center",zIndex:"400",padding:"16px"}},[]);
+  const box=h("div",{style:{background:"linear-gradient(145deg,#052E16,#064E3B)",
+    border:`3px solid ${C.green}`,borderRadius:"22px",padding:"32px 36px",
+    textAlign:"center",maxWidth:"380px",width:"100%",boxShadow:`0 0 60px ${C.green}55`}},[]);
+  box.appendChild(h("div",{style:{fontSize:"52px",marginBottom:"8px"}},["🏆"]));
+  box.appendChild(h("h2",{style:{fontSize:"22px",color:"#6EE7B7",marginBottom:"14px"}},["จบเกม!"]));
+  const list=h("div",{style:{display:"flex",flexDirection:"column",gap:"8px",marginBottom:"20px"}},[]);
+  fin.forEach((t,i)=>{
+    list.appendChild(h("div",{style:{display:"flex",alignItems:"center",gap:"10px",
+      background:i===0?"#0A3A28":C.card,borderRadius:"10px",padding:"9px 14px",
+      border:i===0?`1.5px solid ${C.green}`:`1px solid ${C.border}`}},[
+      h("span",{style:{fontSize:"18px"}},[["🥇","🥈","🥉"][i]||`${i+1}.`]),
+      h("span",{style:{fontSize:"20px"}},[t.emoji]),
+      h("span",{style:{color:t.color,fontWeight:"700",fontSize:"14px"}},[t.name]),
+    ]));
+  });
+  box.appendChild(list);
+  box.appendChild(makeBtn("ปิด",()=>{showWin=false;overlay.remove();},C.green,false,true));
+  overlay.appendChild(box);
+  return overlay;
+}
+
+// ── SCREENS ───────────────────────────────────────────────────────────────────
+function renderLanding(){
+  const wrap=h("div",{style:{minHeight:"100vh",
+    background:`radial-gradient(ellipse at 35% 25%,#2A1760,${C.bg} 65%)`,
+    display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px 18px"}},[]);
+
+  // title
+  const titleWrap=h("div",{style:{textAlign:"center",marginBottom:"24px"}},[
+    h("div",{style:{display:"inline-block",background:"linear-gradient(90deg,#7C3AED,#EC4899)",
+      borderRadius:"20px",padding:"4px 16px",fontSize:"12px",fontWeight:"700",color:"#fff",marginBottom:"10px"}},
+      ["✨ Physics A-Level · SHM Quest"]),
+    h("h1",{style:{fontSize:"30px",fontWeight:"900",
+      background:"linear-gradient(90deg,#A78BFA,#F9A8D4,#FCD34D)",
+      WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",margin:"0 0 6px"}},
+      ["🗺️ ล่าขุมทรัพย์ฟิสิกส์"]),
+    h("p",{style:{color:C.sub,fontSize:"13px"}},["บอร์ด 30 ช่อง · โจทย์ SHM 11 ข้อ · Real-time"]),
+  ]);
+  wrap.appendChild(titleWrap);
+
+  // card
+  const card=h("div",{style:{background:C.panel,border:`2px solid ${C.border}`,borderRadius:"20px",
+    padding:"24px 22px",width:"100%",maxWidth:"400px",boxShadow:"0 0 40px #7C3AED22"}},[]);
+
+  // tabs
+  const tabs=h("div",{style:{display:"flex",gap:"6px",marginBottom:"20px"}},[]);
+  [["join","🧑‍🎓 เข้าร่วม"],["host","👩‍🏫 ครูสร้าง"],["watch","👁️ ดูห้อง"]].forEach(([t,lb])=>{
+    tabs.appendChild(h("button",{
+      style:{flex:"1",padding:"8px 4px",borderRadius:"9px",border:"none",
+        background:activeTab===t?"#7C3AED":C.card,
+        color:activeTab===t?"#fff":C.sub,
+        fontSize:"11px",fontWeight:"700"},
+      onClick:()=>{activeTab=t;render();}
+    },[lb]));
+  });
+  card.appendChild(tabs);
+
+  // content
+  const content=h("div",{style:{display:"flex",flexDirection:"column",gap:"11px"}},[]);
+  if(activeTab==="host"){
+    content.appendChild(h("p",{style:{color:C.sub,fontSize:"13px",textAlign:"center",lineHeight:"1.65",marginBottom:"4px"}},
+      ["สร้างห้อง → แชร์รหัส → รอทีมเข้าร่วม → กด Start Game"]));
+    content.appendChild(makeBtn("🏫 สร้างห้องใหม่",()=>socket.emit("create_room"),"#7C3AED"));
+  } else if(activeTab==="join"){
+    const codeInp=makeInp(joinCode,v=>{joinCode=v.toUpperCase();codeInp.value=joinCode;},"รหัสห้อง (เช่น A1B2)");
+    const nameInp=makeInp(joinName,v=>{joinName=v;},"ชื่อทีม (เช่น ทีมซากุระ 🌸)");
+    content.appendChild(codeInp);content.appendChild(nameInp);
+    content.appendChild(makeBtn("🚀 เข้าร่วมเกม",()=>{
+      if(!joinCode.trim()||!joinName.trim()){showErr("กรุณากรอกรหัสห้องและชื่อทีม");return;}
+      socket.emit("join_room",{code:joinCode.trim(),teamName:joinName.trim()});
+    },"#EC4899",!joinCode||!joinName));
+  } else {
+    const wInp=makeInp(watchCode,v=>{watchCode=v.toUpperCase();wInp.value=watchCode;},"รหัสห้อง");
+    content.appendChild(h("p",{style:{color:C.sub,fontSize:"13px",textAlign:"center"}},["เข้าดูในฐานะผู้ควบคุม ไม่มีลูกเต๋า"]));
+    content.appendChild(wInp);
+    content.appendChild(makeBtn("👁️ เข้าดูและควบคุม",()=>{
+      if(!watchCode.trim()){showErr("กรุณากรอกรหัสห้อง");return;}
+      socket.emit("watch_room",{code:watchCode.trim()});
+    },C.cyan,!watchCode));
+  }
+  card.appendChild(content);
+  wrap.appendChild(card);
+
+  // legend
+  const leg=h("div",{style:{marginTop:"16px",display:"flex",gap:"14px",flexWrap:"wrap",justifyContent:"center"}},[]);
+  [["❓","11 โจทย์ SHM"],["💀","5 กับดัก"],["⭐","4 บูสต์"],["🏆","30 ช่อง"]].forEach(([ic,lb])=>{
+    leg.appendChild(h("span",{style:{fontSize:"12px",color:"#2D1F6B"}},[`${ic} ${lb}`]));
+  });
+  wrap.appendChild(leg);
+  return wrap;
+}
+
+function renderHostLobby(){
+  const teams=Object.values(room?.teams||{});
+  const wrap=h("div",{style:{minHeight:"100vh",
+    background:`radial-gradient(ellipse at 20% 20%,#2A1760,${C.bg} 60%)`,
+    display:"flex",flexDirection:"column",alignItems:"center",padding:"28px 18px"}},[]);
+
+  wrap.appendChild(h("h2",{style:{fontSize:"20px",fontWeight:"900",marginBottom:"4px",
+    background:"linear-gradient(90deg,#A78BFA,#F9A8D4)",
+    WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}},["👩‍🏫 ห้องรอของครู"]));
+  wrap.appendChild(h("p",{style:{color:C.sub,marginBottom:"22px",fontSize:"13px"}},["รอนักเรียนเข้าร่วม แล้วกด Start"]));
+
+  // code card
+  const codeCard=h("div",{style:{background:C.panel,border:`2px solid ${C.yellow}`,
+    borderRadius:"16px",padding:"18px 26px",textAlign:"center",marginBottom:"22px",
+    boxShadow:`0 0 24px ${C.yellow}22`}},[
+    h("div",{style:{fontSize:"11px",color:C.yellow,fontWeight:"700",marginBottom:"5px"}},["รหัสห้อง — แชร์ให้นักเรียน"]),
+    h("div",{style:{fontSize:"44px",fontWeight:"900",letterSpacing:"8px",color:C.yellow,fontFamily:"monospace"}},[room.code]),
+    makeBtn("📋 คัดลอกรหัส",()=>{
+      navigator.clipboard?.writeText(room.code).catch(()=>{});
+      showErr("คัดลอกแล้ว! ✅");
+    },"#4B3D9A",false,true),
+  ]);
+  wrap.appendChild(codeCard);
+
+  // teams
+  const teamBox=h("div",{style:{background:C.panel,border:`1.5px solid ${C.border}`,
+    borderRadius:"14px",padding:"16px",width:"100%",maxWidth:"400px",marginBottom:"18px"}},[]);
+  const teamHeader=h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"11px"}},[
+    h("span",{style:{fontSize:"12px",color:C.sub,fontWeight:"700"}},[`ทีมที่เข้าร่วม (${teams.length})`]),
+    makeBtn("🔄 รีเฟรช",()=>{},"#2D1B69",false,true),
+  ]);
+  teamBox.appendChild(teamHeader);
+  if(teams.length===0){teamBox.appendChild(h("div",{style:{color:C.border,fontSize:"13px",textAlign:"center",padding:"14px 0"}},["รอนักเรียนเข้าร่วม..."]));}
+  teams.forEach(t=>{
+    teamBox.appendChild(h("div",{style:{display:"flex",alignItems:"center",gap:"10px",
+      background:C.card,borderRadius:"9px",padding:"9px 12px",marginBottom:"7px",
+      border:`1.5px solid ${t.color}33`}},[
+      h("span",{style:{fontSize:"20px"}},[t.emoji]),
+      h("div",{style:{flex:"1"}},[
+        h("div",{style:{fontWeight:"700",color:t.color,fontSize:"13px"}},[t.name]),
+        h("div",{style:{fontSize:"10px",color:C.sub}},[`ช่องที่ ${t.pos}`]),
+      ]),
+      makeBtn("นำออก",()=>socket.emit("kick_team",{code:room.code,teamId:t.id}),C.red,false,true),
+    ]));
+  });
+  wrap.appendChild(teamBox);
+  wrap.appendChild(makeBtn(`🚀 Start Game (${teams.length} ทีม)`,
+    ()=>socket.emit("start_game",{code:room.code}),C.green,teams.length===0));
+  return wrap;
+}
+
+function renderTeamLobby(){
+  const teams=Object.values(room?.teams||{});
+  const me=room?.teams?.[myId];
+  const wrap=h("div",{style:{minHeight:"100vh",
+    background:`radial-gradient(ellipse at 30% 30%,#2A1760,${C.bg} 60%)`,
+    display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px"}},[]);
+  wrap.appendChild(h("div",{style:{fontSize:"52px",marginBottom:"8px",textAlign:"center"}},[me?.emoji||"🌸"]));
+  wrap.appendChild(h("h2",{style:{fontSize:"20px",fontWeight:"900",color:me?.color||"#A78BFA",textAlign:"center",marginBottom:"6px"}},[me?.name||""]));
+  wrap.appendChild(h("p",{style:{color:C.sub,fontSize:"13px",textAlign:"center",marginBottom:"10px"}},["เข้าร่วมสำเร็จ! รอครูกด Start..."]));
+  wrap.appendChild(h("div",{style:{background:C.card,borderRadius:"8px",padding:"5px 14px",
+    fontSize:"13px",color:C.yellow,fontFamily:"monospace",marginBottom:"20px"}},[`ห้อง: ${room?.code}`]));
+
+  const teamList=h("div",{style:{background:C.panel,border:`1.5px solid ${C.border}`,
+    borderRadius:"14px",padding:"16px",width:"100%",maxWidth:"320px",marginBottom:"18px"}},[
+    h("div",{style:{fontSize:"12px",color:C.sub,fontWeight:"700",marginBottom:"10px"}},[`ทีมในห้อง (${teams.length})`]),
+  ]);
+  teams.forEach(t=>{
+    teamList.appendChild(h("div",{style:{display:"flex",alignItems:"center",gap:"9px",
+      padding:"7px 0",borderBottom:`1px solid ${C.border}33`}},[
+      h("span",{},[t.emoji]),
+      h("span",{style:{color:t.id===myId?t.color:C.sub,fontWeight:t.id===myId?"700":"400",fontSize:"14px"}},
+        [t.name+(t.id===myId?" 👈":"")]),
+    ]));
+  });
+  wrap.appendChild(teamList);
+
+  const dot=h("div",{style:{width:"8px",height:"8px",borderRadius:"50%",
+    background:C.green,boxShadow:`0 0 8px ${C.green}`,animation:"pulse 1.2s ease infinite"}},[]);
+  wrap.appendChild(h("div",{style:{display:"flex",alignItems:"center",gap:"8px",color:C.sub,fontSize:"13px"}},[dot,"รอครูเริ่มเกม..."]));
+  return wrap;
+}
+
+function renderGame(){
+  const teams=Object.values(room?.teams||{});
+  const me=room?.teams?.[myId];
+  const sorted=[...teams].sort((a,b)=>b.pos-a.pos);
+
+  const wrap=h("div",{style:{minHeight:"100vh",
+    background:`radial-gradient(ellipse at 15% 15%,#2A1760,${C.bg} 58%)`,
+    padding:"12px 10px"}},[]);
+
+  // header
+  wrap.appendChild(h("div",{style:{display:"flex",alignItems:"center",
+    justifyContent:"space-between",marginBottom:"10px"}},[
+    h("div",{},[
+      h("div",{style:{fontSize:"14px",fontWeight:"900"}},["🗺️ ล่าขุมทรัพย์ฟิสิกส์"]),
+      h("div",{style:{fontSize:"10px",color:C.sub}},[`ห้อง `,h("b",{style:{color:C.yellow,fontFamily:"monospace"}},[room?.code||""])]),
+    ]),
+    me?h("div",{style:{textAlign:"right"}},[
+      h("div",{style:{fontSize:"18px"}},[me.emoji]),
+      h("div",{style:{fontSize:"11px",color:me.color,fontWeight:"700"}},[me.name]),
+      h("div",{style:{fontSize:"10px",color:C.sub}},[`ช่อง ${me.pos}/${TOTAL}`]),
+    ]):null,
+  ]));
+
+  const main=h("div",{style:{display:"flex",gap:"10px",flexWrap:"wrap",justifyContent:"center"}},[]);
+
+  // board
+  const boardWrap=h("div",{style:{background:C.panel,border:`2px solid ${C.border}`,
+    borderRadius:"14px",padding:"10px"}},[makeBoard(teams,false)]);
+  const leg=h("div",{style:{display:"flex",gap:"10px",marginTop:"8px",flexWrap:"wrap"}},[]);
+  [["❓","โจทย์(11)"],["💀","ถอย2"],["⭐","หน้า2"],["🏆","ชนะ"]].forEach(([ic,lb])=>{
+    leg.appendChild(h("span",{style:{fontSize:"10px",color:C.border}},[`${ic} ${lb}`]));
+  });
+  boardWrap.appendChild(leg);
+  main.appendChild(boardWrap);
+
+  // right panel
+  const right=h("div",{style:{display:"flex",flexDirection:"column",gap:"9px",minWidth:"185px",flex:"1",maxWidth:"220px"}},[]);
+
+  // progress
+  if(me){
+    const prog=h("div",{style:{background:C.card,border:`1.5px solid ${me.color}44`,borderRadius:"12px",padding:"10px 12px"}},[
+      h("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:"5px"}},[
+        h("span",{style:{fontSize:"11px",color:me.color,fontWeight:"700"}},[`${me.emoji} ${me.name}`]),
+        h("span",{style:{fontSize:"11px",color:C.sub}},[`${me.pos}/${TOTAL}`]),
+      ]),
+    ]);
+    const bar=h("div",{style:{height:"6px",background:C.border,borderRadius:"4px",overflow:"hidden"}},[]);
+    bar.appendChild(h("div",{style:{height:"100%",background:me.color,borderRadius:"4px",
+      width:`${((me.pos-1)/(TOTAL-1))*100}%`,transition:"width .5s"}}));
+    prog.appendChild(bar);
+    prog.appendChild(h("div",{style:{marginTop:"5px",fontSize:"10px",color:C.sub}},
+      [`ความคืบหน้า ${Math.round(((me.pos-1)/(TOTAL-1))*100)}%`]));
+    right.appendChild(prog);
+  }
+
+  // dice
+  const diceWrap=h("div",{style:{background:C.card,border:`1.5px solid ${C.border}`,
+    borderRadius:"12px",padding:"12px 10px",textAlign:"center"}},[]);
+  const diceEl=h("div",{style:{fontSize:"52px",lineHeight:"1",marginBottom:"8px",
+    display:"inline-block",animation:rolling?"spin .08s linear infinite":"none"}},
+    [rolling&&diceVal?FACES[diceVal]:"🎲"]);
+  diceWrap.appendChild(diceEl);
+
+  const myDone=me?.finished||false;
+  const hasPending=!!(me?.pendingQ);
+  diceWrap.appendChild(makeBtn(
+    myDone?"🏆 จบแล้ว!":hasPending?"⏳ ตอบก่อน":rolling?"กำลังทอย...":"🎲 ทอยลูกเต๋า",
+    ()=>{
+      if(rolling||hasPending||myDone)return;
+      rolling=true;diceVal=null;render();
+      let c=0;
+      const iv=setInterval(()=>{
+        diceVal=Math.floor(Math.random()*6)+1;
+        const d=document.getElementById("diceface");
+        if(d)d.textContent=FACES[diceVal];
+        if(++c>=10){clearInterval(iv);rolling=false;socket.emit("roll_dice",{code:room.code});}
+      },75);
+    },
+    me?.color||"#7C3AED",rolling||hasPending||myDone,true
+  ));
+  right.appendChild(diceWrap);
+
+  // leaderboard
+  const lb=h("div",{style:{background:C.card,border:`1.5px solid ${C.border}`,
+    borderRadius:"12px",padding:"10px 11px",flex:"1"}},[
+    h("div",{style:{fontSize:"10px",color:C.sub,fontWeight:"700",marginBottom:"8px"}},["🏅 อันดับ"]),
+  ]);
+  sorted.forEach((t,i)=>{
+    const row=h("div",{style:{display:"flex",alignItems:"center",gap:"6px",
+      padding:"5px 0",borderBottom:`1px solid ${C.border}22`}},[
+      h("span",{style:{fontSize:"12px",width:"18px",textAlign:"center",color:C.sub}},[["🥇","🥈","🥉"][i]||`${i+1}.`]),
+      h("span",{style:{fontSize:"15px"}},[t.emoji]),
+      h("div",{style:{flex:"1",minWidth:"0"}},[
+        h("div",{style:{fontSize:"11px",fontWeight:t.id===myId?"700":"400",
+          color:t.id===myId?t.color:C.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},
+          [t.name+(t.finished?" 🏆":"")+(t.id===myId?" 👈":"")]),
+        h("div",{style:{height:"3px",background:C.border,borderRadius:"3px",marginTop:"2px"}},[
+          h("div",{style:{height:"100%",background:t.color,borderRadius:"3px",
+            width:`${((t.pos-1)/(TOTAL-1))*100}%`,transition:"width .4s"}}),
+        ]),
+      ]),
+      h("span",{style:{fontSize:"10px",color:C.sub,fontFamily:"monospace",flexShrink:"0"}},[String(t.pos)]),
+    ]);
+    lb.appendChild(row);
+  });
+  right.appendChild(lb);
+
+  // my log
+  if(me?.log){
+    const logBox=h("div",{style:{background:C.card,border:`1.5px solid ${me.color}33`,
+      borderRadius:"11px",padding:"8px 10px"}},[
+      h("div",{style:{fontSize:"10px",color:C.sub,fontWeight:"700",marginBottom:"4px"}},["📋 ของฉัน"]),
+    ]);
+    me.log.slice(0,4).forEach((l,i)=>{
+      logBox.appendChild(h("div",{style:{fontSize:"10px",color:i===0?C.text:"#352870",marginBottom:"2px",lineHeight:"1.4"}},[l]));
+    });
+    right.appendChild(logBox);
+  }
+
+  main.appendChild(right);
+  wrap.appendChild(main);
+
+  // question modal
+  if(pendingAnswerQ&&me){wrap.appendChild(makeQModal(pendingAnswerQ,me.color));}
+  // win screen
+  if(showWin){wrap.appendChild(makeWinScreen(teams));}
+
+  return wrap;
+}
+
+function renderHostDashboard(){
+  const teams=Object.values(room?.teams||{});
+  const sorted=[...teams].sort((a,b)=>b.pos-a.pos);
+
+  const wrap=h("div",{style:{minHeight:"100vh",
+    background:`radial-gradient(ellipse at 10% 10%,#2A1760,${C.bg} 58%)`,
+    padding:"14px 12px"}},[]);
+
+  // header
+  wrap.appendChild(h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"12px"}},[
+    h("div",{},[
+      h("div",{style:{fontSize:"16px",fontWeight:"900"}},["👩‍🏫 แดชบอร์ดครู"]),
+      h("div",{style:{fontSize:"11px",color:C.sub}},[
+        "ห้อง ",h("b",{style:{color:C.yellow,fontFamily:"monospace",fontSize:"14px"}},[room?.code||""]),
+        h("span",{style:{marginLeft:"8px",color:C.border}},` · ${teams.length} ทีม · 30 ช่อง · 11 โจทย์`),
+      ]),
+    ]),
+    h("div",{style:{display:"flex",gap:"7px"}},[
+      makeBtn("🔄 รีเซ็ต",()=>socket.emit("reset_game",{code:room.code}),C.red,false,true),
+    ]),
+  ]));
+
+  const main=h("div",{style:{display:"flex",gap:"12px",flexWrap:"wrap",alignItems:"flex-start"}},[]);
+
+  // mini board
+  const boardWrap=h("div",{style:{background:C.panel,border:`2px solid ${C.border}`,borderRadius:"14px",padding:"10px"}},[
+    h("div",{style:{fontSize:"10px",color:C.sub,fontWeight:"700",marginBottom:"8px"}},["📍 ภาพรวมกระดาน"]),
+    makeBoard(teams,true),
+  ]);
+  main.appendChild(boardWrap);
+
+  // right
+  const right=h("div",{style:{flex:"1",minWidth:"240px",display:"flex",flexDirection:"column",gap:"10px"}},[]);
+
+  // stats
+  const stats=h("div",{style:{background:C.panel,border:`1.5px solid ${C.border}`,
+    borderRadius:"12px",padding:"12px 14px",display:"flex",gap:"16px",flexWrap:"wrap"}},[]);
+  [["ทีมทั้งหมด",teams.length,"#A78BFA"],
+   ["จบแล้ว",teams.filter(t=>t.finished).length,C.green],
+   ["กำลังตอบ",teams.filter(t=>t.pendingQ).length,C.yellow],
+   ["โจทย์","11/30",C.cyan]].forEach(([lb,v,col])=>{
+    stats.appendChild(h("div",{style:{textAlign:"center"}},[
+      h("div",{style:{fontSize:"22px",fontWeight:"900",color:col}},[String(v)]),
+      h("div",{style:{fontSize:"10px",color:C.sub}},[lb]),
+    ]));
+  });
+  right.appendChild(stats);
+
+  // team cards
+  const teamBox=h("div",{style:{background:C.panel,border:`1.5px solid ${C.border}`,
+    borderRadius:"12px",padding:"12px 13px"}},[
+    h("div",{style:{fontSize:"11px",color:C.sub,fontWeight:"700",marginBottom:"10px"}},["🏅 อันดับทีม"]),
+  ]);
+  sorted.forEach((t,i)=>{
+    const card=h("div",{style:{background:C.card,borderRadius:"9px",padding:"9px 11px",
+      marginBottom:"7px",border:`1.5px solid ${t.color}33`,
+      display:"flex",alignItems:"center",gap:"8px"}},[
+      h("span",{style:{fontSize:"13px",width:"19px",textAlign:"center"}},[["🥇","🥈","🥉"][i]||`${i+1}.`]),
+      h("span",{style:{fontSize:"18px"}},[t.emoji]),
+      h("div",{style:{flex:"1",minWidth:"0"}},[
+        h("div",{style:{fontWeight:"700",color:t.color,fontSize:"12px",
+          whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},
+          [t.name+(t.finished?" 🏆":"")]),
+        h("div",{style:{height:"4px",background:C.border,borderRadius:"3px",marginTop:"2px"}},[
+          h("div",{style:{height:"100%",background:t.color,borderRadius:"3px",
+            width:`${((t.pos-1)/(TOTAL-1))*100}%`,transition:"width .4s"}}),
+        ]),
+        h("div",{style:{fontSize:"10px",color:C.sub,marginTop:"2px"}},[
+          `ช่อง ${t.pos}/${TOTAL}`,
+          t.pendingQ?h("span",{style:{color:C.yellow,marginLeft:"6px"}},["⏳ กำลังตอบ"]):null,
+        ]),
+      ]),
+      makeBtn("นำออก",()=>socket.emit("kick_team",{code:room.code,teamId:t.id}),C.red,false,true),
+    ]);
+    teamBox.appendChild(card);
+  });
+  if(teams.length===0)teamBox.appendChild(h("div",{style:{color:C.border,fontSize:"13px",textAlign:"center",padding:"10px 0"}},["ยังไม่มีทีม"]));
+  right.appendChild(teamBox);
+
+  // log
+  const logBox=h("div",{style:{background:C.panel,border:`1.5px solid ${C.border}`,
+    borderRadius:"12px",padding:"10px 12px"}},[
+    h("div",{style:{fontSize:"10px",color:C.sub,fontWeight:"700",marginBottom:"8px"}},["📋 บันทึกล่าสุด"]),
+  ]);
+  const allLogs=teams.flatMap(t=>(t.log||[]).slice(0,2).map((l,i)=>({key:`${t.id}-${i}`,emoji:t.emoji,color:t.color,name:t.name,msg:l})));
+  allLogs.slice(0,8).forEach(item=>{
+    logBox.appendChild(h("div",{style:{display:"flex",gap:"5px",marginBottom:"4px",fontSize:"10px"}},[
+      h("span",{},[item.emoji]),
+      h("span",{style:{color:item.color,fontWeight:"700",flexShrink:"0"}},[item.name+":"]),
+      h("span",{style:{color:C.sub}},[item.msg]),
+    ]));
+  });
+  if(allLogs.length===0)logBox.appendChild(h("div",{style:{color:C.border,fontSize:"11px"}},["ยังไม่มีกิจกรรม"]));
+  right.appendChild(logBox);
+
+  main.appendChild(right);
+  wrap.appendChild(main);
+  if(showWin)wrap.appendChild(makeWinScreen(teams));
+  return wrap;
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function render(){
+  const app=document.getElementById("app");
+  // keep errbar
+  const err=document.getElementById("errbar");
+  app.innerHTML="";
+  if(err)app.appendChild(err);
+
+  let view;
+  if(screen==="landing")           view=renderLanding();
+  else if(screen==="host_lobby")   view=renderHostLobby();
+  else if(screen==="team_lobby")   view=renderTeamLobby();
+  else if(screen==="game")         view=renderGame();
+  else if(screen==="host_dashboard") view=renderHostDashboard();
+  if(view)app.appendChild(view);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+window.addEventListener("DOMContentLoaded",()=>{
+  // error bar
+  const errbar=h("div",{id:"errbar",style:{
+    display:"none",position:"fixed",top:"14px",left:"50%",transform:"translateX(-50%)",
+    background:"#250808",border:`1.5px solid ${C.red}`,borderRadius:"10px",
+    padding:"9px 18px",color:"#FCA5A5",fontSize:"13px",cursor:"pointer",
+    zIndex:"9999",boxShadow:`0 4px 20px ${C.red}44`,whiteSpace:"nowrap",
+  }},[]);
+  errbar.addEventListener("click",()=>errbar.style.display="none");
+  document.getElementById("app").appendChild(errbar);
+
+  initSocket();
+  render();
+});
+</script>
+</body>
+</html>
