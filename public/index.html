@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>🐍 ผจญภัยใน SHM Map</title>
+<title>ðŸ à¸œà¸ˆà¸à¸ à¸±à¸¢à¹ƒà¸™ SHM Map</title>
 <script src="/socket.io/socket.io.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -20,53 +20,436 @@ input{font-family:inherit;}
 <body>
 <div id="app"></div>
 <script>
+// â”€â”€ CONSTANTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const TOTAL=30,COLS=6;
 const Q_STEPS=new Set([3,6,9,12,15,17,20,22,24,26,28]);
 const TRAPS=new Set([5,11,16,23,27]);
 const BOOSTS=new Set([7,13,19,25]);
 const QUESTIONS=[
-  {step:3,q:"การเคลื่อนที่แบบ SHM เกิดขึ้นเมื่อแรงลัพธ์ที่กระทำต่อวัตถุเป็นอย่างไร?",ch:["คงที่ตลอดเวลา","แปรผันตรงกับการกระจัด พุ่งเข้าหาสมดุล","แปรผันตรงกับความเร็ว","เป็นศูนย์ตลอดเวลา"],ans:1,hint:"F = −kx แรงพุ่งเข้าหาตำแหน่งสมดุลเสมอ"},
-  {step:6,q:"ลูกตุ้มเชือกยาว 40 cm แกว่งบนดาวที่ g = 4.9 m/s² คาบ T = ?",ch:["0.90 s","1.26 s","1.79 s","2.00 s"],ans:2,hint:"T = 2π√(L/g) = 2π√(0.4/4.9) ≈ 1.79 s"},
-  {step:9,q:"สปริง k = 400 N/m ติดมวล 1 kg ความถี่ f = ?",ch:["2.0 Hz","3.2 Hz","6.3 Hz","20.0 Hz"],ans:1,hint:"f = (1/2π)√(k/m) = (1/2π)√400 ≈ 3.18 Hz"},
-  {step:12,q:"ถ้าวัตถุเริ่มต้นที่ตำแหน่งสมดุล กราฟ x(t) มีรูปแบบใด?",ch:["A cos(ωt)","A sin(ωt)","A tan(ωt)","เส้นตรง"],ans:1,hint:"เริ่มที่ x = 0 → x = A sin(ωt)"},
-  {step:15,q:"สปริง k = 500 N/m มวล 2 kg แอมพลิจูด 8 cm อัตราเร็วสูงสุด v_max = ?",ch:["0.63 m/s","1.26 m/s","2.00 m/s","4.00 m/s"],ans:1,hint:"v_max = A√(k/m) = 0.08×√250 ≈ 1.26 m/s"},
-  {step:17,q:"ตำแหน่งใดใน SHM ที่พลังงานจลน์ = พลังงานศักย์?",ch:["x = 0","x = ±A","x = ±A/√2","x = ±A/2"],ans:2,hint:"½mv² = ½kx² → x = A/√2 ≈ 0.707A"},
-  {step:20,q:"มวล 0.4 kg สปริง k = 160 N/m แอมพลิจูด 6 cm ความเร่งสูงสุด a_max = ?",ch:["12 m/s²","24 m/s²","48 m/s²","96 m/s²"],ans:1,hint:"a_max = (k/m)·A = (160/0.4)×0.06 = 24 m/s²"},
-  {step:22,q:"ถ้าเพิ่มมวลที่ติดสปริงเป็น 4 เท่า คาบจะเปลี่ยนแปลงอย่างไร?",ch:["เพิ่มเป็น 2 เท่า","เพิ่มเป็น 4 เท่า","ลดเหลือครึ่งหนึ่ง","ไม่เปลี่ยนแปลง"],ans:0,hint:"T = 2π√(m/k) → m×4 → T×√4 = 2T"},
-  {step:24,q:"สปริง k = 300 N/m แอมพลิจูด 10 cm พลังงานกลรวม E = ?",ch:["0.75 J","1.50 J","3.00 J","6.00 J"],ans:1,hint:"E = ½kA² = ½×300×(0.1)² = 1.50 J"},
-  {step:26,q:"ตัดเชือกลูกตุ้มให้สั้นลงเหลือ 1/4 คาบจะเปลี่ยนอย่างไร?",ch:["ลดเหลือ 1/4","ลดเหลือ 1/2","เพิ่มเป็น 2 เท่า","ไม่เปลี่ยนแปลง"],ans:1,hint:"T = 2π√(L/g) → L×(1/4) → T×(1/2)"},
-  {step:28,q:"SHM แอมพลิจูด 10 cm ω = 5 rad/s ที่ตำแหน่ง x = 6 cm อัตราเร็ว v = ?",ch:["0.32 m/s","0.40 m/s","0.50 m/s","0.60 m/s"],ans:1,hint:"v = ω√(A²−x²) = 5×√(0.01−0.0036) = 5×0.08 = 0.40 m/s"},
+  {step:3, q:"à¸à¸²à¸£à¹€à¸„à¸¥à¸·à¹ˆà¸­à¸™à¸—à¸µà¹ˆà¹à¸šà¸š SHM à¹€à¸à¸´à¸”à¸‚à¸¶à¹‰à¸™à¹€à¸¡à¸·à¹ˆà¸­à¹à¸£à¸‡à¸¥à¸±à¸žà¸˜à¹Œà¸—à¸µà¹ˆà¸à¸£à¸°à¸—à¸³à¸•à¹ˆà¸­à¸§à¸±à¸•à¸–à¸¸à¹€à¸›à¹‡à¸™à¸­à¸¢à¹ˆà¸²à¸‡à¹„à¸£?", ch:["à¸„à¸‡à¸—à¸µà¹ˆà¸•à¸¥à¸­à¸”à¹€à¸§à¸¥à¸²","à¹à¸›à¸£à¸œà¸±à¸™à¸•à¸£à¸‡à¸à¸±à¸šà¸à¸²à¸£à¸à¸£à¸°à¸ˆà¸±à¸” à¸žà¸¸à¹ˆà¸‡à¹€à¸‚à¹‰à¸²à¸«à¸²à¸ªà¸¡à¸”à¸¸à¸¥","à¹à¸›à¸£à¸œà¸±à¸™à¸•à¸£à¸‡à¸à¸±à¸šà¸„à¸§à¸²à¸¡à¹€à¸£à¹‡à¸§","à¹€à¸›à¹‡à¸™à¸¨à¸¹à¸™à¸¢à¹Œà¸•à¸¥à¸­à¸”à¹€à¸§à¸¥à¸²"], ans:1, hint:"F = âˆ’kx à¹à¸£à¸‡à¸žà¸¸à¹ˆà¸‡à¹€à¸‚à¹‰à¸²à¸«à¸²à¸•à¸³à¹à¸«à¸™à¹ˆà¸‡à¸ªà¸¡à¸”à¸¸à¸¥à¹€à¸ªà¸¡à¸­"},
+  {step:6, q:"à¸¥à¸¹à¸à¸•à¸¸à¹‰à¸¡à¹€à¸Šà¸·à¸­à¸à¸¢à¸²à¸§ 40 cm à¹à¸à¸§à¹ˆà¸‡à¸šà¸™à¸”à¸²à¸§à¸—à¸µà¹ˆ g = 4.9 m/sÂ² à¸„à¸²à¸š T = ?", ch:["0.90 s","1.26 s","1.79 s","2.00 s"], ans:2, hint:"T = 2Ï€âˆš(L/g) = 2Ï€âˆš(0.4/4.9) â‰ˆ 1.79 s"},
+  {step:9, q:"à¸ªà¸›à¸£à¸´à¸‡ k = 400 N/m à¸•à¸´à¸”à¸¡à¸§à¸¥ 1 kg à¸„à¸§à¸²à¸¡à¸–à¸µà¹ˆ f = ?", ch:["2.0 Hz","3.2 Hz","6.3 Hz","20.0 Hz"], ans:1, hint:"f = (1/2Ï€)âˆš(k/m) = (1/2Ï€)âˆš400 â‰ˆ 3.18 Hz"},
+  {step:12, q:"à¸–à¹‰à¸²à¸§à¸±à¸•à¸–à¸¸à¹€à¸£à¸´à¹ˆà¸¡à¸•à¹‰à¸™à¸—à¸µà¹ˆà¸•à¸³à¹à¸«à¸™à¹ˆà¸‡à¸ªà¸¡à¸”à¸¸à¸¥ à¸à¸£à¸²à¸Ÿ x(t) à¸¡à¸µà¸£à¸¹à¸›à¹à¸šà¸šà¹ƒà¸”?", ch:["A cos(Ï‰t)","A sin(Ï‰t)","A tan(Ï‰t)","à¹€à¸ªà¹‰à¸™à¸•à¸£à¸‡"], ans:1, hint:"à¹€à¸£à¸´à¹ˆà¸¡à¸—à¸µà¹ˆ x = 0 â†’ x = A sin(Ï‰t)"},
+  {step:15, q:"à¸ªà¸›à¸£à¸´à¸‡ k = 500 N/m à¸¡à¸§à¸¥ 2 kg à¹à¸­à¸¡à¸žà¸¥à¸´à¸ˆà¸¹à¸” 8 cm à¸­à¸±à¸•à¸£à¸²à¹€à¸£à¹‡à¸§à¸ªà¸¹à¸‡à¸ªà¸¸à¸” v_max = ?", ch:["0.63 m/s","1.26 m/s","2.00 m/s","4.00 m/s"], ans:1, hint:"v_max = Aâˆš(k/m) = 0.08Ã—âˆš250 â‰ˆ 1.26 m/s"},
+  {step:17, q:"à¸•à¸³à¹à¸«à¸™à¹ˆà¸‡à¹ƒà¸”à¹ƒà¸™ SHM à¸—à¸µà¹ˆà¸žà¸¥à¸±à¸‡à¸‡à¸²à¸™à¸ˆà¸¥à¸™à¹Œ = à¸žà¸¥à¸±à¸‡à¸‡à¸²à¸™à¸¨à¸±à¸à¸¢à¹Œ?", ch:["x = 0","x = Â±A","x = Â±A/âˆš2","x = Â±A/2"], ans:2, hint:"Â½mvÂ² = Â½kxÂ² â†’ x = A/âˆš2 â‰ˆ 0.707A"},
+  {step:20, q:"à¸¡à¸§à¸¥ 0.4 kg à¸ªà¸›à¸£à¸´à¸‡ k = 160 N/m à¹à¸­à¸¡à¸žà¸¥à¸´à¸ˆà¸¹à¸” 6 cm à¸„à¸§à¸²à¸¡à¹€à¸£à¹ˆà¸‡à¸ªà¸¹à¸‡à¸ªà¸¸à¸” a_max = ?", ch:["12 m/sÂ²","24 m/sÂ²","48 m/sÂ²","96 m/sÂ²"], ans:1, hint:"a_max = (k/m)Â·A = (160/0.4)Ã—0.06 = 24 m/sÂ²"},
+  {step:22, q:"à¸–à¹‰à¸²à¹€à¸žà¸´à¹ˆà¸¡à¸¡à¸§à¸¥à¸—à¸µà¹ˆà¸•à¸´à¸”à¸ªà¸›à¸£à¸´à¸‡à¹€à¸›à¹‡à¸™ 4 à¹€à¸—à¹ˆà¸² à¸„à¸²à¸šà¸ˆà¸°à¹€à¸›à¸¥à¸µà¹ˆà¸¢à¸™à¹à¸›à¸¥à¸‡à¸­à¸¢à¹ˆà¸²à¸‡à¹„à¸£?", ch:["à¹€à¸žà¸´à¹ˆà¸¡à¹€à¸›à¹‡à¸™ 2 à¹€à¸—à¹ˆà¸²","à¹€à¸žà¸´à¹ˆà¸¡à¹€à¸›à¹‡à¸™ 4 à¹€à¸—à¹ˆà¸²","à¸¥à¸”à¹€à¸«à¸¥à¸·à¸­à¸„à¸£à¸¶à¹ˆà¸‡à¸«à¸™à¸¶à¹ˆà¸‡","à¹„à¸¡à¹ˆà¹€à¸›à¸¥à¸µà¹ˆà¸¢à¸™à¹à¸›à¸¥à¸‡"], ans:0, hint:"T = 2Ï€âˆš(m/k) â†’ mÃ—4 â†’ TÃ—âˆš4 = 2T"},
+  {step:24, q:"à¸ªà¸›à¸£à¸´à¸‡ k = 300 N/m à¹à¸­à¸¡à¸žà¸¥à¸´à¸ˆà¸¹à¸” 10 cm à¸žà¸¥à¸±à¸‡à¸‡à¸²à¸™à¸à¸¥à¸£à¸§à¸¡ E = ?", ch:["0.75 J","1.50 J","3.00 J","6.00 J"], ans:1, hint:"E = Â½kAÂ² = Â½Ã—300Ã—(0.1)Â² = 1.50 J"},
+  {step:26, q:"à¸•à¸±à¸”à¹€à¸Šà¸·à¸­à¸à¸¥à¸¹à¸à¸•à¸¸à¹‰à¸¡à¹ƒà¸«à¹‰à¸ªà¸±à¹‰à¸™à¸¥à¸‡à¹€à¸«à¸¥à¸·à¸­ 1/4 à¸„à¸²à¸šà¸ˆà¸°à¹€à¸›à¸¥à¸µà¹ˆà¸¢à¸™à¸­à¸¢à¹ˆà¸²à¸‡à¹„à¸£?", ch:["à¸¥à¸”à¹€à¸«à¸¥à¸·à¸­ 1/4","à¸¥à¸”à¹€à¸«à¸¥à¸·à¸­ 1/2","à¹€à¸žà¸´à¹ˆà¸¡à¹€à¸›à¹‡à¸™ 2 à¹€à¸—à¹ˆà¸²","à¹„à¸¡à¹ˆà¹€à¸›à¸¥à¸µà¹ˆà¸¢à¸™à¹à¸›à¸¥à¸‡"], ans:1, hint:"T = 2Ï€âˆš(L/g) â†’ LÃ—(1/4) â†’ TÃ—(1/2)"},
+  {step:28, q:"SHM à¹à¸­à¸¡à¸žà¸¥à¸´à¸ˆà¸¹à¸” 10 cm Ï‰ = 5 rad/s à¸—à¸µà¹ˆà¸•à¸³à¹à¸«à¸™à¹ˆà¸‡ x = 6 cm à¸­à¸±à¸•à¸£à¸²à¹€à¸£à¹‡à¸§ v = ?", ch:["0.32 m/s","0.40 m/s","0.50 m/s","0.60 m/s"], ans:1, hint:"v = Ï‰âˆš(AÂ²âˆ’xÂ²) = 5Ã—âˆš(0.01âˆ’0.0036) = 5Ã—0.08 = 0.40 m/s"},
 ];
-const PALETTE=[{color:"#EC4899",emoji:"🌸"},{color:"#06B6D4",emoji:"🌊"},{color:"#10B981",emoji:"🍀"},{color:"#F59E0B",emoji:"⚡"},{color:"#A78BFA",emoji:"🔮"},{color:"#EF4444",emoji:"🔥"}];
-const C={bg:"#080616",panel:"#0F0B26",card:"#160E32",border:"#231748",text:"#EDE9FF",sub:"#6B5EAD",yellow:"#FCD34D",green:"#10B981",red:"#EF4444",cyan:"#06B6D4",purple:"#7C3AED",pink:"#EC4899"};
-const FACES=["","⚀","⚁","⚂","⚃","⚄","⚅"];
-const ROWS=(()=>{const cells=Array.from({length:TOTAL},(_,i)=>i+1);const rows=[];for(let r=0;r<Math.ceil(TOTAL/COLS);r++){const row=cells.slice(r*COLS,r*COLS+COLS);rows.push(r%2===0?row:[...row].reverse());}return rows.reverse();})();
+const PALETTE=[
+  {color:"#EC4899",emoji:"ðŸŒ¸"},{color:"#06B6D4",emoji:"ðŸŒŠ"},
+  {color:"#10B981",emoji:"ðŸ€"},{color:"#F59E0B",emoji:"âš¡"},
+  {color:"#A78BFA",emoji:"ðŸ”®"},{color:"#EF4444",emoji:"ðŸ”¥"},
+];
+const C={bg:"#080616",panel:"#0F0B26",card:"#160E32",border:"#231748",
+  text:"#EDE9FF",sub:"#6B5EAD",yellow:"#FCD34D",green:"#10B981",
+  red:"#EF4444",cyan:"#06B6D4",purple:"#7C3AED",pink:"#EC4899"};
+const FACES=["","âš€","âš","âš‚","âšƒ","âš„","âš…"];
+
+// â”€â”€ BOARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const ROWS=(()=>{
+  const cells=Array.from({length:TOTAL},(_,i)=>i+1);
+  const rows=[];
+  for(let r=0;r<Math.ceil(TOTAL/COLS);r++){
+    const row=cells.slice(r*COLS,r*COLS+COLS);
+    rows.push(r%2===0?row:[...row].reverse());
+  }
+  return rows.reverse();
+})();
+
+// â”€â”€ STATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let socket,screen="landing",room=null,myId=null,role=null;
 let diceVal=null,rolling=false,pendingQ=null,showWin=false;
 let activeTab="join",joinCode="",joinName="",watchCode="";
-function initSocket(){socket=io();socket.on("room_created",({code})=>{room={code,status:"waiting",teams:{}};role="host";screen="host_lobby";render();});socket.on("joined",({code,teamId})=>{myId=teamId;role="team";screen="team_lobby";render();});socket.on("watching",({code,status})=>{role="host";screen=status==="playing"?"host_dashboard":"host_lobby";render();});socket.on("room_update",(r)=>{room=r;if(role==="team"&&r.status==="playing"&&screen==="team_lobby")screen="game";const me=room.teams[myId];if(me&&me.pendingQ&&!pendingQ){pendingQ=QUESTIONS.find(q=>q.step===me.pendingQ)||null;}if(me&&!me.pendingQ)pendingQ=null;const finCount=Object.values(r.teams).filter(t=>t.finished).length;if(finCount>=3&&!showWin)showWin=true;render();});socket.on("game_started",()=>{screen=role==="host"?"host_dashboard":"game";render();});socket.on("kicked",()=>{screen="landing";room=null;myId=null;showErr("คุณถูกครูนำออกจากห้อง");render();});socket.on("err",(msg)=>showErr(msg));}
-function processMove(team,roll){let newPos=Math.min(team.pos+roll,TOTAL);let t={...team,log:["🎲 ทอยได้ "+roll+" → ไปช่องที่ "+newPos,...(team.log||[])]};const q=QUESTIONS.find(q=>q.step===newPos);if(q)return{...t,pos:newPos,pendingQ:newPos,log:["❓ เจอคำถามช่องที่ "+newPos+"!",...t.log]};t={...t,pos:newPos};if(TRAPS.has(newPos)){const b=Math.max(1,newPos-2);t={...t,pos:b,log:["💀 กับดัก! ถอยหลัง 2 ช่อง → ช่องที่ "+b,...t.log]};}if(BOOSTS.has(newPos)){const f=Math.min(TOTAL,newPos+2);t={...t,pos:f,log:["⭐ บูสต์! เดินหน้า 2 ช่อง → ช่องที่ "+f,...t.log]};}if(t.pos>=TOTAL)t={...t,pos:TOTAL,finished:true,finishedAt:Date.now(),log:["🏆 ถึงเป้าหมายแล้ว!",...t.log]};return t;}
-function showErr(msg){const el=document.getElementById("errbar");if(!el)return;el.textContent="⚠️ "+msg;el.style.display="block";setTimeout(()=>el.style.display="none",3000);}
-function h(tag,attrs,children){const el=document.createElement(tag);if(attrs)Object.entries(attrs).forEach(([k,v])=>{if(k==="style"&&typeof v==="object")Object.assign(el.style,v);else if(k.startsWith("on"))el.addEventListener(k.slice(2).toLowerCase(),v);else el.setAttribute(k,v);});if(children)children.forEach(c=>{if(c==null)return;el.appendChild(typeof c==="string"?document.createTextNode(c):c);});return el;}
-function makeCell(n,teams,sm){const isQ=Q_STEPS.has(n),isTrap=TRAPS.has(n),isBoost=BOOSTS.has(n),isGoal=n===TOTAL;const here=teams.filter(t=>t.pos===n);const sz=sm?"40px":"52px";let bg=C.card,bdr="1px solid "+C.border;if(isGoal){bg="#052E16";bdr="2px solid "+C.green;}else if(isQ){bg="#1A1756";bdr="1.5px solid #6366F1";}else if(isTrap){bg="#250808";bdr="1.5px solid "+C.red+"66";}else if(isBoost){bg="#072214";bdr="1.5px solid "+C.green+"66";}const numEl=h("span",{style:{position:"absolute",top:"2px",left:"3px",fontSize:"8px",color:C.border}},[String(n)]);let icon="";if(isGoal)icon="🏆";else if(isQ)icon="❓";else if(isTrap)icon="💀";else if(isBoost)icon="⭐";const iconEl=icon?h("span",{style:{fontSize:sm?"16px":"19px"}},[icon]):null;const cell=h("div",{style:{position:"relative",width:sz,height:sz,background:bg,border:bdr,borderRadius:"8px",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:"0"}},[numEl,iconEl]);if(here.length>0){const wrap=h("div",{style:{position:"absolute",top:"-7px",right:"-7px",display:"flex",flexWrap:"wrap",gap:"1px",maxWidth:"40px",justifyContent:"flex-end",zIndex:"2"}},[]);here.slice(0,4).forEach(t=>{wrap.appendChild(h("div",{style:{width:"20px",height:"20px",borderRadius:"50%",background:t.color,border:"2px solid #fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"11px",boxShadow:"0 0 8px "+t.color,animation:"bob .7s ease infinite alternate"}},[t.emoji]));});cell.appendChild(wrap);}return cell;}
-function makeBoard(teams,sm){const wrap=h("div",{style:{display:"flex",flexDirection:"column",gap:sm?"3px":"4px"}},[]);ROWS.forEach(row=>{const rowEl=h("div",{style:{display:"flex",gap:sm?"3px":"4px"}},[]);row.forEach(n=>rowEl.appendChild(makeCell(n,teams,sm)));wrap.appendChild(rowEl);});return wrap;}
-function makeQModal(q,myColor,onAnswer){let answered=false;const overlay=h("div",{style:{position:"fixed",inset:"0",background:"#000000cc",display:"flex",alignItems:"center",justifyContent:"center",zIndex:"500",padding:"16px"}},[]);const box=h("div",{style:{background:"linear-gradient(145deg,"+C.panel+","+C.card+")",border:"2.5px solid "+myColor,borderRadius:"20px",padding:"24px 22px",maxWidth:"500px",width:"100%",boxShadow:"0 0 50px "+myColor+"44"}},[]);const tagRow=h("div",{style:{display:"flex",gap:"8px",marginBottom:"14px"}},[h("span",{style:{background:myColor+"22",border:"1px solid "+myColor+"55",borderRadius:"20px",padding:"3px 12px",fontSize:"12px",color:myColor,fontWeight:"700"}},["❓ ช่องที่ "+q.step]),h("span",{style:{background:C.cyan+"22",border:"1px solid "+C.cyan+"55",borderRadius:"20px",padding:"3px 12px",fontSize:"12px",color:C.cyan,fontWeight:"700"}},{},),]);tagRow.children[1].textContent="คำถาม SHM";const qText=h("p",{style:{color:C.text,fontSize:"15px",lineHeight:"1.7",margin:"0 0 18px"}},[q.q]);const choicesWrap=h("div",{style:{display:"flex",flexDirection:"column",gap:"9px"}},[]);q.ch.forEach((c,i)=>{const btn=h("button",{style:{background:C.card,border:"1.5px solid "+C.border,borderRadius:"10px",padding:"11px 14px",color:C.text,fontSize:"14px",fontFamily:"Cambria,serif",fontStyle:"italic",cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:"10px",width:"100%",transition:"all .15s"},onClick:()=>{if(answered)return;answered=true;Array.from(choicesWrap.children).forEach((b,j)=>{if(j===q.ans){Object.assign(b.style,{background:"#052E16",border:"2px solid "+C.green,color:"#6EE7B7"});}else if(j===i&&i!==q.ans){Object.assign(b.style,{background:"#250808",border:"2px solid "+C.red,color:"#FCA5A5"});}});box.appendChild(h("div",{style:{marginTop:"14px",background:"#061A10",border:"1px solid "+C.green+"44",borderRadius:"9px",padding:"9px 13px",fontSize:"13px",color:"#6EE7B7"}},{},));box.lastChild.textContent="💡 "+q.hint;setTimeout(()=>{onAnswer(i);overlay.remove();},1200);}},[h("span",{style:{width:"26px",height:"26px",borderRadius:"50%",background:C.border,flexShrink:"0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"12px",fontWeight:"700",color:C.sub,fontStyle:"normal"}},[String(i+1)]),c]);choicesWrap.appendChild(btn);});box.appendChild(tagRow);box.appendChild(qText);box.appendChild(choicesWrap);overlay.appendChild(box);return overlay;}
-function makeWinScreen(teams){const fin=[...teams].filter(t=>t.finished).sort((a,b)=>a.finishedAt-b.finishedAt).slice(0,3);const still=[...teams].filter(t=>!t.finished).sort((a,b)=>b.pos-a.pos);const medals=["🥇","🥈","🥉"];const podH=[100,75,55];const podColors=["#FFD700","#C0C0C0","#CD7F32"];const overlay=h("div",{style:{position:"fixed",inset:"0",background:"#000000ee",display:"flex",alignItems:"center",justifyContent:"center",zIndex:"600",padding:"16px"}},[]);const box=h("div",{style:{background:"linear-gradient(145deg,#0A0520,#150D35)",border:"2px solid #7C3AED",borderRadius:"24px",padding:"28px 24px",maxWidth:"420px",width:"100%",boxShadow:"0 0 60px #7C3AED55",textAlign:"center"}},[]);box.appendChild(h("div",{style:{fontSize:"48px",marginBottom:"4px"}},{},));box.firstChild.textContent="🏆";box.appendChild(h("h2",{style:{fontSize:"22px",color:C.yellow,margin:"0 0 4px",fontWeight:"900"}},["จบเกม!"]));box.appendChild(h("p",{style:{color:C.sub,fontSize:"13px",margin:"0 0 24px"}},["3 ทีมแรกที่ถึงช่องที่ 30"]));const podOrder=[fin[1],fin[0],fin[2]];const podRanks=[1,0,2];const podWrap=h("div",{style:{display:"flex",alignItems:"flex-end",justifyContent:"center",gap:"8px",marginBottom:"24px",height:"160px"}},[]);podOrder.forEach((t,idx)=>{const rank=podRanks[idx];if(!t){podWrap.appendChild(h("div",{style:{width:"110px"}}));return;}const col=h("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",width:"110px"}},[]);col.appendChild(h("div",{style:{fontSize:"26px",marginBottom:"2px"}},[t.emoji]));col.appendChild(h("div",{style:{fontSize:"12px",fontWeight:"700",color:t.color,maxWidth:"100px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginBottom:"4px"}},[t.name]));col.appendChild(h("div",{style:{width:"100%",height:podH[rank]+"px",background:"linear-gradient(180deg,"+podColors[rank]+"44,"+podColors[rank]+"22)",border:"2px solid "+podColors[rank]+"88",borderRadius:"8px 8px 0 0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"26px"}},[medals[rank]]));podWrap.appendChild(col);});box.appendChild(podWrap);if(still.length>0){const sl=h("div",{style:{background:C.card,borderRadius:"10px",padding:"10px 14px",marginBottom:"18px",textAlign:"left"}},[h("div",{style:{fontSize:"11px",color:C.sub,fontWeight:"700",marginBottom:"8px"}},{},)]);sl.firstChild.textContent="ทีมที่เหลือ";still.forEach((t,i)=>{sl.appendChild(h("div",{style:{display:"flex",alignItems:"center",gap:"8px",padding:"5px 0",borderBottom:i<still.length-1?"1px solid "+C.border+"44":"none"}},[h("span",{style:{fontSize:"14px",color:C.sub}},["#"+(fin.length+i+1)]),h("span",{style:{fontSize:"16px"}},[t.emoji]),h("span",{style:{color:t.color,fontWeight:"700",fontSize:"13px"}},[t.name]),h("span",{style:{marginLeft:"auto",fontSize:"11px",color:C.sub}},{},)]));sl.lastChild.lastChild.textContent="ช่อง "+t.pos;});box.appendChild(sl);}const closeBtn=h("button",{style:{background:"linear-gradient(135deg,"+C.purple+","+C.pink+")",border:"none",borderRadius:"12px",padding:"12px 40px",color:"#fff",fontSize:"15px",fontWeight:"700",cursor:"pointer",fontFamily:"inherit",boxShadow:"0 4px 18px "+C.purple+"55"},onClick:()=>{showWin=false;overlay.remove();render();}},{},);closeBtn.textContent="เล่นอีกครั้ง 🔄";box.appendChild(closeBtn);overlay.appendChild(box);return overlay;}
-function renderLanding(){const wrap=h("div",{style:{minHeight:"100vh",background:"radial-gradient(ellipse at 35% 25%,#2A1760,"+C.bg+" 65%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px 18px"}},[]);wrap.appendChild(h("div",{style:{textAlign:"center",marginBottom:"28px"}},[h("div",{style:{display:"inline-block",background:"linear-gradient(90deg,#7C3AED,#EC4899)",borderRadius:"20px",padding:"5px 20px",fontSize:"13px",fontWeight:"700",color:"#fff",marginBottom:"14px"}},{},),h("h1",{style:{fontSize:"34px",fontWeight:"900",margin:"0 0 4px",background:"linear-gradient(90deg,#A78BFA,#F9A8D4,#FCD34D)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}},{})]));wrap.firstChild.firstChild.textContent="🐍 SHM Snake & Ladder — Physics A-Level";wrap.firstChild.lastChild.textContent="ผจญภัยใน SHM Map";const leg=h("div",{style:{display:"flex",gap:"16px",marginBottom:"28px",flexWrap:"wrap",justifyContent:"center"}},[]);[["❓","โจทย్
-(ถูก=เดินต่อ ผิด=ถอย 3)"],["💀","กับดัก
-(ถอยหลัง 2 ช่อง)"],["⭐","บูสต్
-(เดินหน้า 2 ช่อง)"],["🏆","เป้าหมาย
-(ช่องที่ 30)"]].forEach(([ic,lb])=>{leg.appendChild(h("div",{style:{textAlign:"center",background:C.panel,border:"1px solid "+C.border,borderRadius:"12px",padding:"12px 14px",minWidth:"80px"}},[h("div",{style:{fontSize:"26px",marginBottom:"4px"}},[ic]),h("div",{style:{fontSize:"11px",color:C.sub,whiteSpace:"pre-line",lineHeight:"1.4"}},[lb])]));});wrap.appendChild(leg);const card=h("div",{style:{background:C.panel,border:"2px solid "+C.border,borderRadius:"20px",padding:"24px 22px",width:"100%",maxWidth:"400px",boxShadow:"0 0 40px #7C3AED22",marginBottom:"0"}},[]);const tabs=h("div",{style:{display:"flex",gap:"6px",marginBottom:"20px"}},[]);[["เข้าร่วม","join"],["ครูสร้าง","host"],["ดูห้อง","watch"]].forEach(([lb,t])=>{tabs.appendChild(h("button",{style:{flex:"1",padding:"9px 4px",borderRadius:"9px",border:"none",background:activeTab===t?C.purple:C.card,color:activeTab===t?"#fff":C.sub,fontSize:"12px",fontWeight:"700"},onClick:()=>{activeTab=t;render();}},[lb]));});card.appendChild(tabs);const errDiv=h("div",{id:"taberr",style:{display:"none",background:"#250808",border:"1px solid "+C.red+"55",borderRadius:"8px",padding:"8px 12px",fontSize:"12px",color:"#FCA5A5",marginBottom:"12px"}},[]);card.appendChild(errDiv);function tabErr(msg){errDiv.textContent="⚠️ "+msg;errDiv.style.display="block";}const content=h("div",{style:{display:"flex",flexDirection:"column",gap:"10px"}},[]);if(activeTab==="join"){const ci=h("input",{type:"text",value:joinCode,placeholder:"รหัสห้อง (เช่น A1B2)",style:{background:C.card,border:"1.5px solid "+C.border,borderRadius:"9px",padding:"10px 14px",color:C.text,fontSize:"15px",outline:"none",width:"100%"}});ci.addEventListener("input",e=>{joinCode=e.target.value.toUpperCase();ci.value=joinCode;});const ni=h("input",{type:"text",value:joinName,placeholder:"ชื่อทีม (เช่น ทีมซากุระ 🌸)",style:{background:C.card,border:"1.5px solid "+C.border,borderRadius:"9px",padding:"10px 14px",color:C.text,fontSize:"15px",outline:"none",width:"100%"}});ni.addEventListener("input",e=>{joinName=e.target.value;});const joinBtn=h("button",{style:{background:"linear-gradient(135deg,"+C.pink+","+C.pink+"cc)",border:"none",borderRadius:"10px",padding:"12px",color:"#fff",fontSize:"14px",fontWeight:"700",width:"100%",boxShadow:"0 3px 14px "+C.pink+"44"},onClick:()=>{if(!joinCode.trim()){tabErr("กรุณากรอกรหัสห้อง");return;}if(!joinName.trim()){tabErr("กรุณากรอกชื่อทีม");return;}socket.emit("join_room",{code:joinCode.trim(),teamName:joinName.trim()});}},{},);joinBtn.textContent="🚀 เข้าร่วมเกม";content.appendChild(ci);content.appendChild(ni);content.appendChild(joinBtn);}else if(activeTab==="host"){content.appendChild(h("p",{style:{color:C.sub,fontSize:"13px",textAlign:"center",lineHeight:"1.65"}},{},));content.lastChild.textContent="สร้างห้อง → แชร์รหัส → รอทีมเข้าร่วม → กด Start Game";const hostBtn=h("button",{style:{background:"linear-gradient(135deg,"+C.purple+","+C.purple+"cc)",border:"none",borderRadius:"10px",padding:"12px",color:"#fff",fontSize:"14px",fontWeight:"700",width:"100%",boxShadow:"0 3px 14px "+C.purple+"44"},onClick:()=>socket.emit("create_room")},{},);hostBtn.textContent="🏫 สร้างห้องใหม่";content.appendChild(hostBtn);}else{const wi=h("input",{type:"text",value:watchCode,placeholder:"รหัสห้อง",style:{background:C.card,border:"1.5px solid "+C.border,borderRadius:"9px",padding:"10px 14px",color:C.text,fontSize:"15px",outline:"none",width:"100%"}});wi.addEventListener("input",e=>{watchCode=e.target.value.toUpperCase();wi.value=watchCode;});content.appendChild(h("p",{style:{color:C.sub,fontSize:"13px",textAlign:"center"}},{},));content.firstChild.textContent="เข้าดูในฐานะผู้ควบคุม ไม่มีลูกเต๋า";content.appendChild(wi);const watchBtn=h("button",{style:{background:"linear-gradient(135deg,"+C.cyan+","+C.cyan+"cc)",border:"none",borderRadius:"10px",padding:"12px",color:"#fff",fontSize:"14px",fontWeight:"700",width:"100%",boxShadow:"0 3px 14px "+C.cyan+"44"},onClick:()=>{if(!watchCode.trim()){tabErr("กรุณากรอกรหัสห้อง");return;}socket.emit("watch_room",{code:watchCode.trim()});}},{},);watchBtn.textContent="👁️ เข้าดูและควบคุม";content.appendChild(watchBtn);}card.appendChild(content);wrap.appendChild(card);return wrap;}
-function renderHostLobby(){const teams=Object.values(room?.teams||{});const wrap=h("div",{style:{minHeight:"100vh",background:"radial-gradient(ellipse at 20% 20%,#2A1760,"+C.bg+" 60%)",display:"flex",flexDirection:"column",alignItems:"center",padding:"24px 18px"}},[]);wrap.appendChild(h("div",{style:{width:"100%",maxWidth:"420px",marginBottom:"10px"}},[h("button",{style:{background:"none",border:"1px solid "+C.border,borderRadius:"8px",padding:"6px 14px",color:C.sub,fontSize:"12px"},onClick:()=>{screen="host_dashboard";render();}},{},)]));wrap.firstChild.firstChild.textContent="← ดูแดชบอร์ด";wrap.appendChild(h("h2",{style:{fontSize:"20px",fontWeight:"900",marginBottom:"4px",background:"linear-gradient(90deg,#A78BFA,#F9A8D4)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}},{},));wrap.lastChild.textContent="👩‍🏫 ห้องรอของครู";wrap.appendChild(h("p",{style:{color:C.sub,marginBottom:"20px",fontSize:"13px"}},{},));wrap.lastChild.textContent="รอนักเรียนเข้าร่วม แล้วกด Start Game";const codeCard=h("div",{style:{background:C.panel,border:"2px solid "+C.yellow,borderRadius:"16px",padding:"16px 24px",textAlign:"center",marginBottom:"20px",width:"100%",maxWidth:"420px"}},[h("div",{style:{fontSize:"11px",color:C.yellow,fontWeight:"700",marginBottom:"5px"}},{},),h("div",{style:{fontSize:"44px",fontWeight:"900",letterSpacing:"8px",color:C.yellow,fontFamily:"monospace",marginBottom:"10px"}},[room?.code])]);codeCard.firstChild.textContent="รหัสห้อง — แชร์ให้นักเรียน";const copyBtn=h("button",{style:{background:"#4B3D9A",border:"none",borderRadius:"8px",padding:"6px 18px",color:"#fff",fontSize:"12px"},onClick:()=>{navigator.clipboard?.writeText(room.code).catch(()=>{});copyBtn.textContent="✅ คัดลอกแล้ว!";setTimeout(()=>copyBtn.textContent="📋 คัดลอกรหัส",2000);}},{},);copyBtn.textContent="📋 คัดลอกรหัส";codeCard.appendChild(copyBtn);wrap.appendChild(codeCard);const teamBox=h("div",{style:{background:C.panel,border:"1.5px solid "+C.border,borderRadius:"14px",padding:"16px",width:"100%",maxWidth:"420px",marginBottom:"18px"}},[h("div",{style:{fontSize:"12px",color:C.sub,fontWeight:"700",marginBottom:"11px"}},{},)]);teamBox.firstChild.textContent="ทีมที่เข้าร่วม ("+teams.length+")";if(!teams.length){const w=h("div",{style:{color:C.border,fontSize:"13px",textAlign:"center",padding:"14px 0"}},{},);w.textContent="รอนักเรียนเข้าร่วม...";teamBox.appendChild(w);}teams.forEach(t=>{const row=h("div",{style:{display:"flex",alignItems:"center",gap:"10px",background:C.card,borderRadius:"9px",padding:"9px 12px",marginBottom:"7px",border:"1.5px solid "+t.color+"33"}},[h("span",{style:{fontSize:"20px"}},[t.emoji]),h("div",{style:{flex:"1"}},[h("div",{style:{fontWeight:"700",color:t.color,fontSize:"13px"}},[t.name]),h("div",{style:{fontSize:"10px",color:C.sub}},{},)])]);row.children[1].lastChild.textContent="ช่องที่ "+t.pos;const kb=h("button",{style:{background:"none",border:"1px solid "+C.red+"55",borderRadius:"6px",padding:"3px 9px",color:C.red,fontSize:"11px"},onClick:()=>socket.emit("kick_team",{code:room.code,teamId:t.id})},{},);kb.textContent="นำออก";row.appendChild(kb);teamBox.appendChild(row);});wrap.appendChild(teamBox);const startBtn=h("button",{style:{background:teams.length?"linear-gradient(135deg,"+C.green+",#059669)":"#2D1B69",border:"none",borderRadius:"12px",padding:"13px 0",color:"#fff",fontSize:"15px",fontWeight:"700",width:"100%",maxWidth:"420px",cursor:teams.length?"pointer":"not-allowed",boxShadow:teams.length?"0 4px 18px "+C.green+"44":"none"},onClick:()=>{if(teams.length)socket.emit("start_game",{code:room.code});}},{},);startBtn.textContent="🚀 Start Game ("+teams.length+" ทีม)";wrap.appendChild(startBtn);return wrap;}
-function renderTeamLobby(){const teams=Object.values(room?.teams||{});const me=room?.teams?.[myId];const wrap=h("div",{style:{minHeight:"100vh",background:"radial-gradient(ellipse at 30% 30%,#2A1760,"+C.bg+" 60%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px"}},[]);wrap.appendChild(h("div",{style:{fontSize:"52px",marginBottom:"8px",textAlign:"center"}},[me?.emoji||"🌸"]));const nm=h("h2",{style:{fontSize:"20px",fontWeight:"900",color:me?.color||"#A78BFA",textAlign:"center",marginBottom:"6px"}},{},);nm.textContent=me?.name||"";wrap.appendChild(nm);const p1=h("p",{style:{color:C.sub,fontSize:"13px",textAlign:"center",marginBottom:"10px"}},{},);p1.textContent="เข้าร่วมสำเร็จ! รอครูกด Start...";wrap.appendChild(p1);const rc=h("div",{style:{background:C.card,borderRadius:"8px",padding:"5px 14px",fontSize:"13px",color:C.yellow,fontFamily:"monospace",marginBottom:"20px"}},{},);rc.textContent="ห้อง: "+(room?.code||"");wrap.appendChild(rc);const tl=h("div",{style:{background:C.panel,border:"1.5px solid "+C.border,borderRadius:"14px",padding:"16px",width:"100%",maxWidth:"320px",marginBottom:"18px"}},[]);const th=h("div",{style:{fontSize:"12px",color:C.sub,fontWeight:"700",marginBottom:"10px"}},{},);th.textContent="ทีมในห้อง ("+teams.length+")";tl.appendChild(th);teams.forEach(t=>{const row=h("div",{style:{display:"flex",alignItems:"center",gap:"9px",padding:"7px 0",borderBottom:"1px solid "+C.border+"33"}},[h("span",{},[t.emoji])]);const nm2=h("span",{style:{color:t.id===myId?t.color:C.sub,fontWeight:t.id===myId?"700":"400",fontSize:"14px"}},{},);nm2.textContent=t.name+(t.id===myId?" 👈 (คุณ)":"");row.appendChild(nm2);tl.appendChild(row);});wrap.appendChild(tl);const dot=h("div",{style:{width:"8px",height:"8px",borderRadius:"50%",background:C.green,boxShadow:"0 0 8px "+C.green,animation:"pulse 1.2s ease infinite"}},[]);const wt=h("div",{style:{display:"flex",alignItems:"center",gap:"8px",color:C.sub,fontSize:"13px"}},[dot]);wt.appendChild(document.createTextNode("รอครูเริ่มเกม..."));wrap.appendChild(wt);return wrap;}
-function renderGame(){const teams=Object.values(room?.teams||{});const me=room?.teams?.[myId];const sorted=[...teams].sort((a,b)=>b.pos-a.pos);const myDone=me?.finished||false;const hasPending=!!pendingQ;const wrap=h("div",{style:{minHeight:"100vh",background:"radial-gradient(ellipse at 15% 15%,#2A1760,"+C.bg+" 58%)",padding:"12px 10px"}},[]);const hdr=h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"12px"}},[h("div",{},[h("div",{style:{fontSize:"15px",fontWeight:"900"}},{},),h("div",{style:{fontSize:"10px",color:C.sub}},[])])]);hdr.firstChild.firstChild.textContent="🐍 ผจญภัยใน SHM Map";const roomSpan=h("span",{style:{color:C.yellow,fontFamily:"monospace"}},[room?.code||""]);hdr.firstChild.lastChild.appendChild(document.createTextNode("ห้อง "));hdr.firstChild.lastChild.appendChild(roomSpan);hdr.firstChild.lastChild.appendChild(document.createTextNode(" · "+teams.length+" ทีม"));if(me){const minfo=h("div",{style:{textAlign:"right"}},[h("span",{style:{fontSize:"22px"}},[me.emoji])]);const mn=h("div",{style:{fontSize:"12px",color:me.color,fontWeight:"700"}},{},);mn.textContent=me.name;const mp=h("div",{style:{fontSize:"10px",color:C.sub}},{},);mp.textContent="ช่องที่ "+me.pos+" / "+TOTAL;minfo.appendChild(mn);minfo.appendChild(mp);hdr.appendChild(minfo);}wrap.appendChild(hdr);const main=h("div",{style:{display:"flex",gap:"12px",flexWrap:"wrap",justifyContent:"center"}},[]);const boardWrap=h("div",{style:{background:C.panel,border:"2px solid "+C.border,borderRadius:"14px",padding:"10px"}},[makeBoard(teams,false)]);const leg=h("div",{style:{display:"flex",gap:"12px",marginTop:"8px",flexWrap:"wrap"}},[]);[["❓","โจทย్"],["💀","ถอย−2"],["⭐","หน้า+2"],["🏆","ชนะ"]].forEach(([ic,lb])=>{const s=h("span",{style:{fontSize:"10px",color:C.sub}},{},);s.textContent=ic+" "+lb;leg.appendChild(s);});boardWrap.appendChild(leg);main.appendChild(boardWrap);const right=h("div",{style:{display:"flex",flexDirection:"column",gap:"9px",minWidth:"185px",flex:"1",maxWidth:"220px"}},[]);if(me){const prog=h("div",{style:{background:C.card,border:"2px solid "+me.color+"55",borderRadius:"12px",padding:"10px 12px"}},[]);const ph=h("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:"5px"}},[]);const pn=h("span",{style:{fontSize:"11px",color:me.color,fontWeight:"700"}},{},);pn.textContent=me.emoji+" "+me.name;const pp=h("span",{style:{fontSize:"11px",color:C.sub}},{},);pp.textContent=me.pos+"/"+TOTAL;ph.appendChild(pn);ph.appendChild(pp);prog.appendChild(ph);const bar=h("div",{style:{height:"6px",background:C.border,borderRadius:"4px",overflow:"hidden"}},[]);bar.appendChild(h("div",{style:{height:"100%",background:me.color,borderRadius:"4px",width:((me.pos-1)/(TOTAL-1)*100)+"%",transition:"width .5s"}}));prog.appendChild(bar);const pct=h("div",{style:{marginTop:"5px",fontSize:"10px",color:C.sub}},{},);pct.textContent="ความคืบหน้า "+Math.round((me.pos-1)/(TOTAL-1)*100)+"%";prog.appendChild(pct);right.appendChild(prog);}
-const diceCard=h("div",{style:{background:C.card,border:"2px solid "+C.border,borderRadius:"12px",padding:"14px 10px",textAlign:"center"}},[]);const diceFace=h("div",{id:"diceFace",style:{fontSize:"72px",lineHeight:"1",marginBottom:"6px",display:"inline-block",animation:rolling?"spin .06s linear infinite":"none",filter:diceVal&&!rolling?"drop-shadow(0 0 14px "+(me?.color||C.purple)+"99)":"none"}},[diceVal?FACES[diceVal]:"🎲"]);diceCard.appendChild(diceFace);if(diceVal&&!rolling&&!hasPending&&!myDone){const dl=h("div",{style:{fontSize:"13px",fontWeight:"700",color:C.yellow,marginBottom:"8px",background:C.yellow+"11",borderRadius:"8px",padding:"4px 0"}},{},);dl.textContent="ทอยได้: "+diceVal+" "+(diceVal>=5?"🌟":"🎯");diceCard.appendChild(dl);}if(hasPending){const ql=h("div",{style:{fontSize:"12px",fontWeight:"700",color:C.yellow,marginBottom:"8px",animation:"pulse 1s ease infinite"}},{},);ql.textContent="❓ ตอบคำถามก่อนนะคะ!";diceCard.appendChild(ql);}if(myDone){const dl2=h("div",{style:{fontSize:"13px",fontWeight:"700",color:C.green,marginBottom:"8px"}},{},);dl2.textContent="🏆 คุณถึงเป้าหมายแล้ว!";diceCard.appendChild(dl2);}const rollBtn=h("button",{id:"rollBtn",style:{background:(rolling||hasPending||myDone)?"#2D1B69":"linear-gradient(135deg,"+(me?.color||C.purple)+","+(me?.color||C.pink)+")",border:"none",borderRadius:"12px",padding:"13px 0",width:"100%",color:"#fff",fontSize:"15px",fontWeight:"700",cursor:(rolling||hasPending||myDone)?"not-allowed":"pointer",boxShadow:(rolling||hasPending||myDone)?"none":"0 4px 20px "+(me?.color||C.purple)+"66",opacity:(hasPending||myDone)?".5":"1",fontFamily:"inherit",transition:"all .2s"},onClick:()=>{if(rolling||hasPending||myDone)return;rolling=true;diceVal=null;render();let c=0;const iv=setInterval(()=>{const v=Math.floor(Math.random()*6)+1;diceVal=v;const df=document.getElementById("diceFace");if(df)df.textContent=FACES[v];if(++c>=14){clearInterval(iv);rolling=false;socket.emit("roll_dice",{code:room.code});}},65);}},{},);rollBtn.textContent=rolling?"⏳ กำลังทอย...":hasPending?"⏳ ตอบคำถามก่อน":myDone?"🏆 จบแล้ว!":"🎲 ทอยลูกเต๋า";diceCard.appendChild(rollBtn);right.appendChild(diceCard);
-const lb=h("div",{style:{background:C.card,border:"1.5px solid "+C.border,borderRadius:"12px",padding:"10px 11px",flex:"1"}},[]);const lbh=h("div",{style:{fontSize:"10px",color:C.sub,fontWeight:"700",marginBottom:"8px"}},{},);lbh.textContent="🏅 อันดับ";lb.appendChild(lbh);sorted.forEach((t,i)=>{const row=h("div",{style:{display:"flex",alignItems:"center",gap:"6px",padding:"5px 0",borderBottom:"1px solid "+C.border+"22"}},[h("span",{style:{fontSize:"12px",width:"18px",textAlign:"center",color:C.sub}},{},),h("span",{style:{fontSize:"15px"}},[t.emoji]),h("div",{style:{flex:"1",minWidth:"0"}},[])]);row.children[0].textContent=["🥇","🥈","🥉"][i]||(i+1)+".";const dn=h("div",{style:{fontSize:"11px",fontWeight:t.id===myId?"700":"400",color:t.id===myId?t.color:C.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},{},);dn.textContent=t.name+(t.finished?" 🏆":"")+(t.id===myId?" 👈":"");const dbar=h("div",{style:{height:"3px",background:C.border,borderRadius:"3px",marginTop:"2px"}},[h("div",{style:{height:"100%",background:t.color,borderRadius:"3px",width:((t.pos-1)/(TOTAL-1)*100)+"%",transition:"width .4s"}})]);row.children[2].appendChild(dn);row.children[2].appendChild(dbar);const sp=h("span",{style:{fontSize:"10px",color:C.sub,fontFamily:"monospace",flexShrink:"0"}},{},);sp.textContent=String(t.pos);row.appendChild(sp);lb.appendChild(row);});right.appendChild(lb);
-if(me?.log){const logBox=h("div",{style:{background:C.card,border:"1.5px solid "+me.color+"44",borderRadius:"11px",padding:"8px 10px"}},[]);const lgh=h("div",{style:{fontSize:"10px",color:C.sub,fontWeight:"700",marginBottom:"4px"}},{},);lgh.textContent="📋 บันทึกของฉัน";logBox.appendChild(lgh);me.log.slice(0,5).forEach((l,i)=>{const le=h("div",{style:{fontSize:"11px",color:i===0?C.text:"#4A3880",marginBottom:"2px",lineHeight:"1.4"}},{},);le.textContent=l;logBox.appendChild(le);});right.appendChild(logBox);}main.appendChild(right);wrap.appendChild(main);if(pendingQ&&me){wrap.appendChild(makeQModal(pendingQ,me.color,(idx)=>{socket.emit("answer_question",{code:room.code,answerIdx:idx});pendingQ=null;}));}if(showWin)wrap.appendChild(makeWinScreen(Object.values(room?.teams||{})));return wrap;}
-function renderHostDashboard(){const teams=Object.values(room?.teams||{});const sorted=[...teams].sort((a,b)=>b.pos-a.pos);const wrap=h("div",{style:{minHeight:"100vh",background:"radial-gradient(ellipse at 10% 10%,#2A1760,"+C.bg+" 58%)",padding:"14px 12px"}},[]);const hdr=h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"12px"}},[h("div",{},[h("div",{style:{fontSize:"16px",fontWeight:"900"}},{},),h("div",{style:{fontSize:"11px",color:C.sub}},[])])]);hdr.firstChild.firstChild.textContent="👩‍🏫 แดชบอร์ดครู";const rc=h("span",{style:{color:C.yellow,fontFamily:"monospace",fontSize:"13px"}},[room?.code||""]);hdr.firstChild.lastChild.appendChild(document.createTextNode("ห้อง "));hdr.firstChild.lastChild.appendChild(rc);hdr.firstChild.lastChild.appendChild(document.createTextNode(" · "+teams.length+" ทีม"));const btns=h("div",{style:{display:"flex",gap:"7px"}},[]);const lobbyBtn=h("button",{style:{background:"none",border:"1px solid "+C.border,borderRadius:"8px",padding:"6px 12px",color:C.sub,fontSize:"11px"},onClick:()=>{screen="host_lobby";render();}},{},);lobbyBtn.textContent="← Lobby";const resetBtn=h("button",{style:{background:"linear-gradient(135deg,"+C.red+",#B91C1C)",border:"none",borderRadius:"8px",padding:"6px 13px",color:"#fff",fontSize:"11px",fontWeight:"700"},onClick:()=>socket.emit("reset_game",{code:room.code})},{},);resetBtn.textContent="🔄 รีเซ็ต";btns.appendChild(lobbyBtn);btns.appendChild(resetBtn);hdr.appendChild(btns);wrap.appendChild(hdr);const main=h("div",{style:{display:"flex",gap:"12px",flexWrap:"wrap",alignItems:"flex-start"}},[]);const bw=h("div",{style:{background:C.panel,border:"2px solid "+C.border,borderRadius:"14px",padding:"10px"}},[]);const bwh=h("div",{style:{fontSize:"10px",color:C.sub,fontWeight:"700",marginBottom:"8px"}},{},);bwh.textContent="📍 ภาพรวมกระดาน";bw.appendChild(bwh);bw.appendChild(makeBoard(teams,true));main.appendChild(bw);const right=h("div",{style:{flex:"1",minWidth:"240px",display:"flex",flexDirection:"column",gap:"10px"}},[]);const stats=h("div",{style:{background:C.panel,border:"1.5px solid "+C.border,borderRadius:"12px",padding:"12px 14px",display:"flex",gap:"16px",flexWrap:"wrap"}},[]);[["ทีมทั้งหมด",teams.length,"#A78BFA"],["จบแล้ว",teams.filter(t=>t.finished).length,C.green],["กำลังตอบ",teams.filter(t=>t.pendingQ).length,C.yellow],["โจทย్","11/30",C.cyan]].forEach(([lb2,v,col])=>{const d=h("div",{style:{textAlign:"center"}},[]);const dv=h("div",{style:{fontSize:"22px",fontWeight:"900",color:col}},{},);dv.textContent=String(v);const dl=h("div",{style:{fontSize:"10px",color:C.sub}},{},);dl.textContent=lb2;d.appendChild(dv);d.appendChild(dl);stats.appendChild(d);});right.appendChild(stats);const teamBox=h("div",{style:{background:C.panel,border:"1.5px solid "+C.border,borderRadius:"12px",padding:"12px 13px"}},[]);const tbh=h("div",{style:{fontSize:"11px",color:C.sub,fontWeight:"700",marginBottom:"10px"}},{},);tbh.textContent="🏅 อันดับทีม";teamBox.appendChild(tbh);sorted.forEach((t,i)=>{const card=h("div",{style:{background:C.card,borderRadius:"9px",padding:"9px 11px",marginBottom:"7px",border:"1.5px solid "+t.color+"33",display:"flex",alignItems:"center",gap:"8px"}},[h("span",{style:{fontSize:"13px",width:"19px",textAlign:"center"}},{},),h("span",{style:{fontSize:"18px"}},[t.emoji]),h("div",{style:{flex:"1",minWidth:"0"}},[])]);card.children[0].textContent=["🥇","🥈","🥉"][i]||(i+1)+".";const dn=h("div",{style:{fontWeight:"700",color:t.color,fontSize:"12px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},{},);dn.textContent=t.name+(t.finished?" 🏆":"");const dbar=h("div",{style:{height:"4px",background:C.border,borderRadius:"3px",marginTop:"2px"}},[h("div",{style:{height:"100%",background:t.color,borderRadius:"3px",width:((t.pos-1)/(TOTAL-1)*100)+"%",transition:"width .4s"}})]);const dp=h("div",{style:{fontSize:"10px",color:C.sub,marginTop:"2px"}},{},);dp.textContent="ช่อง "+t.pos+"/"+TOTAL;card.children[2].appendChild(dn);card.children[2].appendChild(dbar);card.children[2].appendChild(dp);if(t.pendingQ){const pq=h("span",{style:{color:C.yellow,marginLeft:"4px",fontSize:"10px"}},{},);pq.textContent=" ⏳ ตอบอยู่";dp.appendChild(pq);}const kb=h("button",{style:{background:"none",border:"1px solid "+C.red+"55",borderRadius:"6px",padding:"3px 8px",color:C.red,fontSize:"10px"},onClick:()=>socket.emit("kick_team",{code:room.code,teamId:t.id})},{},);kb.textContent="นำออก";card.appendChild(kb);teamBox.appendChild(card);});if(!teams.length){const nt=h("div",{style:{color:C.border,fontSize:"13px",textAlign:"center",padding:"10px 0"}},{},);nt.textContent="ยังไม่มีทีม";teamBox.appendChild(nt);}right.appendChild(teamBox);const logBox=h("div",{style:{background:C.panel,border:"1.5px solid "+C.border,borderRadius:"12px",padding:"10px 12px"}},[]);const lgh=h("div",{style:{fontSize:"10px",color:C.sub,fontWeight:"700",marginBottom:"8px"}},{},);lgh.textContent="📋 บันทึกล่าสุด";logBox.appendChild(lgh);teams.flatMap(t=>(t.log||[]).slice(0,2).map((l,i)=>({emoji:t.emoji,color:t.color,name:t.name,msg:l,key:t.id+i}))).slice(0,8).forEach(item=>{const row=h("div",{style:{display:"flex",gap:"5px",marginBottom:"4px",fontSize:"10px"}},[h("span",{},[item.emoji])]);const nm=h("span",{style:{color:item.color,fontWeight:"700",flexShrink:"0"}},{},);nm.textContent=item.name+":";const mg=h("span",{style:{color:C.sub}},{},);mg.textContent=item.msg;row.appendChild(nm);row.appendChild(mg);logBox.appendChild(row);});if(!teams.length){const nt=h("div",{style:{color:C.border,fontSize:"11px"}},{},);nt.textContent="ยังไม่มีกิจกรรม";logBox.appendChild(nt);}right.appendChild(logBox);main.appendChild(right);wrap.appendChild(main);if(showWin)wrap.appendChild(makeWinScreen(teams));return wrap;}
-function render(){const app=document.getElementById("app");const errbar=document.getElementById("errbar");app.innerHTML="";if(errbar)app.appendChild(errbar);let view;if(screen==="landing")view=renderLanding();else if(screen==="host_lobby")view=renderHostLobby();else if(screen==="team_lobby")view=renderTeamLobby();else if(screen==="game")view=renderGame();else if(screen==="host_dashboard")view=renderHostDashboard();if(view)app.appendChild(view);}
-window.addEventListener("DOMContentLoaded",()=>{const errbar=h("div",{id:"errbar",style:{display:"none",position:"fixed",top:"14px",left:"50%",transform:"translateX(-50%)",background:"#250808",border:"1.5px solid "+C.red,borderRadius:"10px",padding:"9px 18px",color:"#FCA5A5",fontSize:"13px",cursor:"pointer",zIndex:"9999",boxShadow:"0 4px 20px "+C.red+"44",whiteSpace:"nowrap"}},[]);errbar.addEventListener("click",()=>errbar.style.display="none");document.getElementById("app").appendChild(errbar);initSocket();render();});
+let botTimer=null;
+
+// â”€â”€ SOCKET â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function initSocket(){
+  socket=io();
+  socket.on("room_created",({code})=>{room={code,status:"waiting",teams:{}};role="host";screen="host_lobby";render();});
+  socket.on("joined",({code,teamId})=>{myId=teamId;role="team";screen="team_lobby";render();});
+  socket.on("watching",({code,status})=>{role="host";screen=status==="playing"?"host_dashboard":"host_lobby";render();});
+  socket.on("room_update",(r)=>{
+    room=r;
+    if(role==="team"&&r.status==="playing"&&screen==="team_lobby")screen="game";
+    const me=room.teams[myId];
+    if(me&&me.pendingQ&&!pendingQ){pendingQ=QUESTIONS.find(q=>q.step===me.pendingQ)||null;}
+    if(me&&!me.pendingQ)pendingQ=null;
+    const finCount=Object.values(r.teams).filter(t=>t.finished).length;
+    if(finCount>=3&&!showWin)showWin=true;
+    render();
+  });
+  socket.on("game_started",()=>{screen=role==="host"?"host_dashboard":"game";render();});
+  socket.on("kicked",()=>{screen="landing";room=null;myId=null;showErr("à¸„à¸¸à¸“à¸–à¸¹à¸à¸„à¸£à¸¹à¸™à¸³à¸­à¸­à¸à¸ˆà¸²à¸à¸«à¹‰à¸­à¸‡");render();});
+  socket.on("err",(msg)=>showErr(msg));
+}
+
+// â”€â”€ GAME LOGIC â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function processMove(team,roll){
+  let newPos=Math.min(team.pos+roll,TOTAL);
+  let t={...team,log:[`ðŸŽ² à¸—à¸­à¸¢à¹„à¸”à¹‰ ${roll} â†’ à¹„à¸›à¸Šà¹ˆà¸­à¸‡à¸—à¸µà¹ˆ ${newPos}`,...(team.log||[])]};
+  const q=QUESTIONS.find(q=>q.step===newPos);
+  if(q)return{...t,pos:newPos,pendingQ:newPos,log:[`â“ à¹€à¸ˆà¸­à¸„à¸³à¸–à¸²à¸¡à¸Šà¹ˆà¸­à¸‡à¸—à¸µà¹ˆ ${newPos}!`,...t.log]};
+  t={...t,pos:newPos};
+  if(TRAPS.has(newPos)){const b=Math.max(1,newPos-2);t={...t,pos:b,log:[`ðŸ’€ à¸à¸±à¸šà¸”à¸±à¸! à¸–à¸­à¸¢à¸«à¸¥à¸±à¸‡ 2 à¸Šà¹ˆà¸­à¸‡ â†’ à¸Šà¹ˆà¸­à¸‡à¸—à¸µà¹ˆ ${b}`,...t.log]};}
+  if(BOOSTS.has(newPos)){const f=Math.min(TOTAL,newPos+2);t={...t,pos:f,log:[`â­ à¸šà¸¹à¸ªà¸•à¹Œ! à¹€à¸”à¸´à¸™à¸«à¸™à¹‰à¸² 2 à¸Šà¹ˆà¸­à¸‡ â†’ à¸Šà¹ˆà¸­à¸‡à¸—à¸µà¹ˆ ${f}`,...t.log]};}
+  if(t.pos>=TOTAL)t={...t,pos:TOTAL,finished:true,finishedAt:Date.now(),log:["ðŸ† à¸–à¸¶à¸‡à¹€à¸›à¹‰à¸²à¸«à¸¡à¸²à¸¢à¹à¸¥à¹‰à¸§!",...t.log]};
+  return t;
+}
+
+// â”€â”€ HELPERS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function showErr(msg){
+  const el=document.getElementById("errbar");
+  if(!el)return;
+  el.textContent="âš ï¸ "+msg;el.style.display="block";
+  setTimeout(()=>el.style.display="none",3000);
+}
+function h(tag,attrs,children){
+  const el=document.createElement(tag);
+  if(attrs)Object.entries(attrs).forEach(([k,v])=>{
+    if(k==="style"&&typeof v==="object")Object.assign(el.style,v);
+    else if(k.startsWith("on"))el.addEventListener(k.slice(2).toLowerCase(),v);
+    else el.setAttribute(k,v);
+  });
+  if(children)children.forEach(c=>{if(c==null)return;el.appendChild(typeof c==="string"?document.createTextNode(c):c);});
+  return el;
+}
+
+// â”€â”€ BOARD CELL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function makeCell(n,teams,sm){
+  const isQ=Q_STEPS.has(n),isTrap=TRAPS.has(n),isBoost=BOOSTS.has(n),isGoal=n===TOTAL;
+  const here=teams.filter(t=>t.pos===n);
+  const sz=sm?"40px":"52px";
+  let bg=C.card,bdr=`1px solid ${C.border}`;
+  if(isGoal){bg="#052E16";bdr=`2px solid ${C.green}`;}
+  else if(isQ){bg="#1A1756";bdr="1.5px solid #6366F1";}
+  else if(isTrap){bg="#250808";bdr=`1.5px solid ${C.red}66`;}
+  else if(isBoost){bg="#072214";bdr=`1.5px solid ${C.green}66`;}
+  const numEl=h("span",{style:{position:"absolute",top:"2px",left:"3px",fontSize:"8px",color:C.border}},[String(n)]);
+  let icon="";
+  if(isGoal)icon="ðŸ†";else if(isQ)icon="â“";else if(isTrap)icon="ðŸ’€";else if(isBoost)icon="â­";
+  const iconEl=icon?h("span",{style:{fontSize:sm?"16px":"19px"}},[icon]):null;
+  const cell=h("div",{style:{position:"relative",width:sz,height:sz,background:bg,border:bdr,borderRadius:"8px",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:"0"}},[numEl,iconEl]);
+  if(here.length>0){
+    const wrap=h("div",{style:{position:"absolute",top:"-7px",right:"-7px",display:"flex",flexWrap:"wrap",gap:"1px",maxWidth:"40px",justifyContent:"flex-end",zIndex:"2"}},[]);
+    here.slice(0,4).forEach(t=>{wrap.appendChild(h("div",{style:{width:"20px",height:"20px",borderRadius:"50%",background:t.color,border:"2px solid #fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"11px",boxShadow:`0 0 8px ${t.color}`,animation:"bob .7s ease infinite alternate"}},[t.emoji]));});
+    cell.appendChild(wrap);
+  }
+  return cell;
+}
+function makeBoard(teams,sm){
+  const wrap=h("div",{style:{display:"flex",flexDirection:"column",gap:sm?"3px":"4px"}},[]);
+  ROWS.forEach(row=>{const rowEl=h("div",{style:{display:"flex",gap:sm?"3px":"4px"}},[]);row.forEach(n=>rowEl.appendChild(makeCell(n,teams,sm)));wrap.appendChild(rowEl);});
+  return wrap;
+}
+
+// â”€â”€ QUESTION MODAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function makeQModal(q,myColor,onAnswer){
+  let answered=false;
+  const overlay=h("div",{style:{position:"fixed",inset:"0",background:"#000000cc",display:"flex",alignItems:"center",justifyContent:"center",zIndex:"500",padding:"16px"}},[]);
+  const box=h("div",{style:{background:`linear-gradient(145deg,${C.panel},${C.card})`,border:`2.5px solid ${myColor}`,borderRadius:"20px",padding:"24px 22px",maxWidth:"500px",width:"100%",boxShadow:`0 0 50px ${myColor}44`}},[]);
+  const tagRow=h("div",{style:{display:"flex",gap:"8px",marginBottom:"14px"}},[
+    h("span",{style:{background:myColor+"22",border:`1px solid ${myColor}55`,borderRadius:"20px",padding:"3px 12px",fontSize:"12px",color:myColor,fontWeight:"700"}},[`â“ à¸Šà¹ˆà¸­à¸‡à¸—à¸µà¹ˆ ${q.step}`]),
+    h("span",{style:{background:C.cyan+"22",border:`1px solid ${C.cyan}55`,borderRadius:"20px",padding:"3px 12px",fontSize:"12px",color:C.cyan,fontWeight:"700"}},["à¸„à¸³à¸–à¸²à¸¡ SHM"]),
+  ]);
+  const qText=h("p",{style:{color:C.text,fontSize:"15px",lineHeight:"1.7",margin:"0 0 18px"}},[q.q]);
+  const choicesWrap=h("div",{style:{display:"flex",flexDirection:"column",gap:"9px"}},[]);
+  q.ch.forEach((c,i)=>{
+    const btn=h("button",{style:{background:C.card,border:`1.5px solid ${C.border}`,borderRadius:"10px",padding:"11px 14px",color:C.text,fontSize:"14px",fontFamily:"Cambria,serif",fontStyle:"italic",cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:"10px",width:"100%",transition:"all .15s"},
+      onClick:()=>{
+        if(answered)return;answered=true;
+        Array.from(choicesWrap.children).forEach((b,j)=>{
+          if(j===q.ans){Object.assign(b.style,{background:"#052E16",border:`2px solid ${C.green}`,color:"#6EE7B7"});}
+          else if(j===i&&i!==q.ans){Object.assign(b.style,{background:"#250808",border:`2px solid ${C.red}`,color:"#FCA5A5"});}
+        });
+        box.appendChild(h("div",{style:{marginTop:"14px",background:"#061A10",border:`1px solid ${C.green}44`,borderRadius:"9px",padding:"9px 13px",fontSize:"13px",color:"#6EE7B7"}},[`ðŸ’¡ ${q.hint}`]));
+        setTimeout(()=>{onAnswer(i);overlay.remove();},1200);
+      }
+    },[h("span",{style:{width:"26px",height:"26px",borderRadius:"50%",background:C.border,flexShrink:"0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"12px",fontWeight:"700",color:C.sub,fontStyle:"normal"}},[String(i+1)]),c]);
+    choicesWrap.appendChild(btn);
+  });
+  box.appendChild(tagRow);box.appendChild(qText);box.appendChild(choicesWrap);
+  overlay.appendChild(box);return overlay;
+}
+
+// â”€â”€ WIN SCREEN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function makeWinScreen(teams,onClose){
+  const fin=[...teams].filter(t=>t.finished).sort((a,b)=>a.finishedAt-b.finishedAt).slice(0,3);
+  const still=[...teams].filter(t=>!t.finished).sort((a,b)=>b.pos-a.pos);
+  const medals=["ðŸ¥‡","ðŸ¥ˆ","ðŸ¥‰"];
+  const podH=[100,75,55];
+  const podColors=["#FFD700","#C0C0C0","#CD7F32"];
+  const overlay=h("div",{style:{position:"fixed",inset:"0",background:"#000000ee",display:"flex",alignItems:"center",justifyContent:"center",zIndex:"600",padding:"16px"}},[]);
+  const box=h("div",{style:{background:"linear-gradient(145deg,#0A0520,#150D35)",border:"2px solid #7C3AED",borderRadius:"24px",padding:"28px 24px",maxWidth:"420px",width:"100%",boxShadow:"0 0 60px #7C3AED55",textAlign:"center"}},[]);
+  box.appendChild(h("div",{style:{fontSize:"48px",marginBottom:"4px"}},["ðŸ†"]));
+  box.appendChild(h("h2",{style:{fontSize:"22px",color:C.yellow,margin:"0 0 4px",fontWeight:"900"}},["à¸ˆà¸šà¹€à¸à¸¡!"]));
+  box.appendChild(h("p",{style:{color:C.sub,fontSize:"13px",margin:"0 0 24px"}},["3 à¸—à¸µà¸¡à¹à¸£à¸à¸—à¸µà¹ˆà¸–à¸¶à¸‡à¸Šà¹ˆà¸­à¸‡à¸—à¸µà¹ˆ 30"]));
+  // podium: 2nd left, 1st center, 3rd right
+  const podOrder=[fin[1],fin[0],fin[2]];
+  const podRanks=[1,0,2];
+  const podWrap=h("div",{style:{display:"flex",alignItems:"flex-end",justifyContent:"center",gap:"8px",marginBottom:"24px",height:"160px"}},[]);
+  podOrder.forEach((t,idx)=>{
+    const rank=podRanks[idx];
+    if(!t){podWrap.appendChild(h("div",{style:{width:"110px"}}));return;}
+    const col=h("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",width:"110px"}},[]);
+    col.appendChild(h("div",{style:{fontSize:"26px",marginBottom:"2px"}},[t.emoji]));
+    col.appendChild(h("div",{style:{fontSize:"12px",fontWeight:"700",color:t.color,maxWidth:"100px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginBottom:"4px"}},[t.name]));
+    col.appendChild(h("div",{style:{width:"100%",height:`${podH[rank]}px`,background:`linear-gradient(180deg,${podColors[rank]}44,${podColors[rank]}22)`,border:`2px solid ${podColors[rank]}88`,borderRadius:"8px 8px 0 0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"26px"}},[medals[rank]]));
+    podWrap.appendChild(col);
+  });
+  box.appendChild(podWrap);
+  if(still.length>0){
+    const sl=h("div",{style:{background:C.card,borderRadius:"10px",padding:"10px 14px",marginBottom:"18px",textAlign:"left"}},[h("div",{style:{fontSize:"11px",color:C.sub,fontWeight:"700",marginBottom:"8px"}},["à¸—à¸µà¸¡à¸—à¸µà¹ˆà¹€à¸«à¸¥à¸·à¸­"])]);
+    still.forEach((t,i)=>{sl.appendChild(h("div",{style:{display:"flex",alignItems:"center",gap:"8px",padding:"5px 0",borderBottom:i<still.length-1?`1px solid ${C.border}44`:"none"}},[h("span",{style:{fontSize:"14px",color:C.sub}},["#"+(fin.length+i+1)]),h("span",{style:{fontSize:"16px"}},[t.emoji]),h("span",{style:{color:t.color,fontWeight:"700",fontSize:"13px"}},[t.name]),h("span",{style:{marginLeft:"auto",fontSize:"11px",color:C.sub}},[`à¸Šà¹ˆà¸­à¸‡ ${t.pos}`])]));});
+    box.appendChild(sl);
+  }
+  const closeBtn=h("button",{style:{background:`linear-gradient(135deg,${C.purple},${C.pink})`,border:"none",borderRadius:"12px",padding:"12px 40px",color:"#fff",fontSize:"15px",fontWeight:"700",cursor:"pointer",fontFamily:"inherit",boxShadow:`0 4px 18px ${C.purple}55`},onClick:()=>{showWin=false;overlay.remove();render();}},["à¹€à¸¥à¹ˆà¸™à¸­à¸µà¸à¸„à¸£à¸±à¹‰à¸‡ ðŸ”„"]);
+  box.appendChild(closeBtn);
+  overlay.appendChild(box);return overlay;
+}
+
+// â”€â”€ SCREENS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function renderLanding(){
+  const wrap=h("div",{style:{minHeight:"100vh",background:`radial-gradient(ellipse at 35% 25%,#2A1760,${C.bg} 65%)`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px 18px"}},[]);
+  // title
+  wrap.appendChild(h("div",{style:{textAlign:"center",marginBottom:"28px"}},[
+    h("div",{style:{display:"inline-block",background:"linear-gradient(90deg,#7C3AED,#EC4899)",borderRadius:"20px",padding:"5px 20px",fontSize:"13px",fontWeight:"700",color:"#fff",marginBottom:"14px"}},["ðŸ SHM Snake & Ladder â€” Physics A-Level"]),
+    h("h1",{style:{fontSize:"34px",fontWeight:"900",margin:"0 0 4px",background:"linear-gradient(90deg,#A78BFA,#F9A8D4,#FCD34D)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}},["à¸œà¸ˆà¸à¸ à¸±à¸¢à¹ƒà¸™ SHM Map"]),
+  ]));
+  // legend
+  const leg=h("div",{style:{display:"flex",gap:"16px",marginBottom:"28px",flexWrap:"wrap",justifyContent:"center"}},[]);
+  [["â“","à¹‚à¸ˆà¸—à¸¢à¹Œ\n(à¸–à¸¹à¸=à¹€à¸”à¸´à¸™à¸•à¹ˆà¸­ à¸œà¸´à¸”=à¸–à¸­à¸¢ 3)"],["ðŸ’€","à¸à¸±à¸šà¸”à¸±à¸\n(à¸–à¸­à¸¢à¸«à¸¥à¸±à¸‡ 2 à¸Šà¹ˆà¸­à¸‡)"],["â­","à¸šà¸¹à¸ªà¸•à¹Œ\n(à¹€à¸”à¸´à¸™à¸«à¸™à¹‰à¸² 2 à¸Šà¹ˆà¸­à¸‡)"],["ðŸ†","à¹€à¸›à¹‰à¸²à¸«à¸¡à¸²à¸¢\n(à¸Šà¹ˆà¸­à¸‡à¸—à¸µà¹ˆ 30)"]].forEach(([ic,lb])=>{
+    leg.appendChild(h("div",{style:{textAlign:"center",background:C.panel,border:`1px solid ${C.border}`,borderRadius:"12px",padding:"12px 14px",minWidth:"80px"}},[h("div",{style:{fontSize:"26px",marginBottom:"4px"}},[ic]),h("div",{style:{fontSize:"11px",color:C.sub,whiteSpace:"pre-line",lineHeight:"1.4"}},[lb])]));
+  });
+  wrap.appendChild(leg);
+  // card with tabs
+  const card=h("div",{style:{background:C.panel,border:`2px solid ${C.border}`,borderRadius:"20px",padding:"24px 22px",width:"100%",maxWidth:"400px",boxShadow:"0 0 40px #7C3AED22",marginBottom:"20px"}},[]);
+  const tabs=h("div",{style:{display:"flex",gap:"6px",marginBottom:"20px"}},[]);
+  [["join","ðŸ§‘â€ðŸŽ“ à¹€à¸‚à¹‰à¸²à¸£à¹ˆà¸§à¸¡"],["host","ðŸ‘©â€ðŸ« à¸„à¸£à¸¹à¸ªà¸£à¹‰à¸²à¸‡"],["watch","ðŸ‘ï¸ à¸”à¸¹à¸«à¹‰à¸­à¸‡"]].forEach(([t,lb])=>{
+    tabs.appendChild(h("button",{style:{flex:"1",padding:"9px 4px",borderRadius:"9px",border:"none",background:activeTab===t?C.purple:C.card,color:activeTab===t?"#fff":C.sub,fontSize:"12px",fontWeight:"700"},onClick:()=>{activeTab=t;render();}},[lb]));
+  });
+  card.appendChild(tabs);
+  const errDiv=h("div",{id:"taberr",style:{display:"none",background:"#250808",border:`1px solid ${C.red}55`,borderRadius:"8px",padding:"8px 12px",fontSize:"12px",color:"#FCA5A5",marginBottom:"12px",animation:"shake .3s ease"}},[]);
+  card.appendChild(errDiv);
+  function tabErr(msg){errDiv.textContent="âš ï¸ "+msg;errDiv.style.display="block";}
+  const content=h("div",{style:{display:"flex",flexDirection:"column",gap:"10px"}},[]);
+  if(activeTab==="join"){
+    const ci=h("input",{type:"text",value:joinCode,placeholder:"à¸£à¸«à¸±à¸ªà¸«à¹‰à¸­à¸‡ (à¹€à¸Šà¹ˆà¸™ A1B2)",style:{background:C.card,border:`1.5px solid ${C.border}`,borderRadius:"9px",padding:"10px 14px",color:C.text,fontSize:"15px",outline:"none",width:"100%"}});
+    ci.addEventListener("input",e=>{joinCode=e.target.value.toUpperCase();ci.value=joinCode;});
+    const ni=h("input",{type:"text",value:joinName,placeholder:"à¸Šà¸·à¹ˆà¸­à¸—à¸µà¸¡ (à¹€à¸Šà¹ˆà¸™ à¸—à¸µà¸¡à¸‹à¸²à¸à¸¸à¸£à¸° ðŸŒ¸)",style:{background:C.card,border:`1.5px solid ${C.border}`,borderRadius:"9px",padding:"10px 14px",color:C.text,fontSize:"15px",outline:"none",width:"100%"}});
+    ni.addEventListener("input",e=>{joinName=e.target.value;});
+    const joinBtn=h("button",{style:{background:`linear-gradient(135deg,${C.pink},${C.pink}cc)`,border:"none",borderRadius:"10px",padding:"12px",color:"#fff",fontSize:"14px",fontWeight:"700",width:"100%",boxShadow:`0 3px 14px ${C.pink}44`},
+      onClick:()=>{
+        if(!joinCode.trim()){tabErr("à¸à¸£à¸¸à¸“à¸²à¸à¸£à¸­à¸à¸£à¸«à¸±à¸ªà¸«à¹‰à¸­à¸‡");return;}
+        if(!joinName.trim()){tabErr("à¸à¸£à¸¸à¸“à¸²à¸à¸£à¸­à¸à¸Šà¸·à¹ˆà¸­à¸—à¸µà¸¡");return;}
+        socket.emit("join_room",{code:joinCode.trim(),teamName:joinName.trim()});
+      }},["ðŸš€ à¹€à¸‚à¹‰à¸²à¸£à¹ˆà¸§à¸¡à¹€à¸à¸¡"]);
+    content.appendChild(ci);content.appendChild(ni);content.appendChild(joinBtn);
+  } else if(activeTab==="host"){
+    content.appendChild(h("p",{style:{color:C.sub,fontSize:"13px",textAlign:"center",lineHeight:"1.65"}},["à¸ªà¸£à¹‰à¸²à¸‡à¸«à¹‰à¸­à¸‡ â†’ à¹à¸Šà¸£à¹Œà¸£à¸«à¸±à¸ª â†’ à¸£à¸­à¸—à¸µà¸¡à¹€à¸‚à¹‰à¸²à¸£à¹ˆà¸§à¸¡ â†’ à¸à¸” Start Game"]));
+    content.appendChild(h("button",{style:{background:`linear-gradient(135deg,${C.purple},${C.purple}cc)`,border:"none",borderRadius:"10px",padding:"12px",color:"#fff",fontSize:"14px",fontWeight:"700",width:"100%",boxShadow:`0 3px 14px ${C.purple}44`},onClick:()=>socket.emit("create_room")},["ðŸ« à¸ªà¸£à¹‰à¸²à¸‡à¸«à¹‰à¸­à¸‡à¹ƒà¸«à¸¡à¹ˆ"]));
+  } else {
+    const wi=h("input",{type:"text",value:watchCode,placeholder:"à¸£à¸«à¸±à¸ªà¸«à¹‰à¸­à¸‡",style:{background:C.card,border:`1.5px solid ${C.border}`,borderRadius:"9px",padding:"10px 14px",color:C.text,fontSize:"15px",outline:"none",width:"100%"}});
+    wi.addEventListener("input",e=>{watchCode=e.target.value.toUpperCase();wi.value=watchCode;});
+    content.appendChild(h("p",{style:{color:C.sub,fontSize:"13px",textAlign:"center"}},["à¹€à¸‚à¹‰à¸²à¸”à¸¹à¹ƒà¸™à¸à¸²à¸™à¸°à¸œà¸¹à¹‰à¸„à¸§à¸šà¸„à¸¸à¸¡ à¹„à¸¡à¹ˆà¸¡à¸µà¸¥à¸¹à¸à¹€à¸•à¹‹à¸²"]));
+    content.appendChild(wi);
+    content.appendChild(h("button",{style:{background:`linear-gradient(135deg,${C.cyan},${C.cyan}cc)`,border:"none",borderRadius:"10px",padding:"12px",color:"#fff",fontSize:"14px",fontWeight:"700",width:"100%",boxShadow:`0 3px 14px ${C.cyan}44`},onClick:()=>{if(!watchCode.trim()){tabErr("à¸à¸£à¸¸à¸“à¸²à¸à¸£à¸­à¸à¸£à¸«à¸±à¸ªà¸«à¹‰à¸­à¸‡");return;}socket.emit("watch_room",{code:watchCode.trim()});}},["ðŸ‘ï¸ à¹€à¸‚à¹‰à¸²à¸”à¸¹à¹à¸¥à¸°à¸„à¸§à¸šà¸„à¸¸à¸¡"]));
+  }
+  card.appendChild(content);
+  wrap.appendChild(card);
+  return wrap;
+}
+
+function renderHostLobby(){
+  const teams=Object.values(room?.teams||{});
+  const wrap=h("div",{style:{minHeight:"100vh",background:`radial-gradient(ellipse at 20% 20%,#2A1760,${C.bg} 60%)`,display:"flex",flexDirection:"column",alignItems:"center",padding:"24px 18px"}},[]);
+  // back button
+  wrap.appendChild(h("div",{style:{width:"100%",maxWidth:"420px",marginBottom:"10px"}},[h("button",{style:{background:"none",border:`1px solid ${C.border}`,borderRadius:"8px",padding:"6px 14px",color:C.sub,fontSize:"12px"},onClick:()=>{screen="host_dashboard";render();}},["â† à¸”à¸¹à¹à¸”à¸Šà¸šà¸­à¸£à¹Œà¸”"])]));
+  wrap.appendChild(h("h2",{style:{fontSize:"20px",fontWeight:"900",marginBottom:"4px",background:"linear-gradient(90deg,#A78BFA,#F9A8D4)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}},["ðŸ‘©â€ðŸ« à¸«à¹‰à¸­à¸‡à¸£à¸­à¸‚à¸­à¸‡à¸„à¸£à¸¹"]));
+  wrap.appendChild(h("p",{style:{color:C.sub,marginBottom:"20px",fontSize:"13px"}},["à¸£à¸­à¸™à¸±à¸à¹€à¸£à¸µà¸¢à¸™à¹€à¸‚à¹‰à¸²à¸£à¹ˆà¸§à¸¡ à¹à¸¥à¹‰à¸§à¸à¸” Start Game"]));
+  // code card
+  const codeCard=h("div",{style:{background:C.panel,border:`2px solid ${C.yellow}`,borderRadius:"16px",padding:"16px 24px",textAlign:"center",marginBottom:"20px",width:"100%",maxWidth:"420px"}},[
+    h("div",{style:{fontSize:"11px",color:C.yellow,fontWeight:"700",marginBottom:"5px"}},["à¸£à¸«à¸±à¸ªà¸«à¹‰à¸­à¸‡ â€” à¹à¸Šà¸£à¹Œà¹ƒà¸«à¹‰à¸™à¸±à¸à¹€à¸£à¸µà¸¢à¸™"]),
+    h("div",{style:{fontSize:"44px",fontWeight:"900",letterSpacing:"8px",color:C.yellow,fontFamily:"monospace",marginBottom:"10px"}},[room?.code]),
+  ]);
+  const copyBtn=h("button",{style:{background:"#4B3D9A",border:"none",borderRadius:"8px",padding:"6px 18px",color:"#fff",fontSize:"12px"},onClick:()=>{navigator.clipboard?.writeText(room.code).catch(()=>{});copyBtn.textContent="âœ… à¸„à¸±à¸”à¸¥à¸­à¸à¹à¸¥à¹‰à¸§!";setTimeout(()=>copyBtn.textContent="ðŸ“‹ à¸„à¸±à¸”à¸¥à¸­à¸à¸£à¸«à¸±à¸ª",2000);}},["ðŸ“‹ à¸„à¸±à¸”à¸¥à¸­à¸à¸£à¸«à¸±à¸ª"]);
+  codeCard.appendChild(copyBtn);wrap.appendChild(codeCard);
+  // teams
+  const teamBox=h("div",{style:{background:C.panel,border:`1.5px solid ${C.border}`,borderRadius:"14px",padding:"16px",width:"100%",maxWidth:"420px",marginBottom:"18px"}},[h("div",{style:{fontSize:"12px",color:C.sub,fontWeight:"700",marginBottom:"11px"}},[`à¸—à¸µà¸¡à¸—à¸µà¹ˆà¹€à¸‚à¹‰à¸²à¸£à¹ˆà¸§à¸¡ (${teams.length})`])]);
+  if(!teams.length)teamBox.appendChild(h("div",{style:{color:C.border,fontSize:"13px",textAlign:"center",padding:"14px 0"}},["à¸£à¸­à¸™à¸±à¸à¹€à¸£à¸µà¸¢à¸™à¹€à¸‚à¹‰à¸²à¸£à¹ˆà¸§à¸¡..."]));
+  teams.forEach(t=>{
+    teamBox.appendChild(h("div",{style:{display:"flex",alignItems:"center",gap:"10px",background:C.card,borderRadius:"9px",padding:"9px 12px",marginBottom:"7px",border:`1.5px solid ${t.color}33`}},[
+      h("span",{style:{fontSize:"20px"}},[t.emoji]),
+      h("div",{style:{flex:"1"}},[h("div",{style:{fontWeight:"700",color:t.color,fontSize:"13px"}},[t.name]),h("div",{style:{fontSize:"10px",color:C.sub}},[`à¸Šà¹ˆà¸­à¸‡à¸—à¸µà¹ˆ ${t.pos}`])]),
+      h("button",{style:{background:"none",border:`1px solid ${C.red}55`,borderRadius:"6px",padding:"3px 9px",color:C.red,fontSize:"11px"},onClick:()=>socket.emit("kick_team",{code:room.code,teamId:t.id})},["à¸™à¸³à¸­à¸­à¸"]),
+    ]));
+  });
+  wrap.appendChild(teamBox);
+  const startBtn=h("button",{style:{background:teams.length?`linear-gradient(135deg,${C.green},#059669)`:"#2D1B69",border:"none",borderRadius:"12px",padding:"13px 0",color:"#fff",fontSize:"15px",fontWeight:"700",width:"100%",maxWidth:"420px",cursor:teams.length?"pointer":"not-allowed",boxShadow:teams.length?`0 4px 18px ${C.green}44`:"none"},onClick:()=>{if(teams.length)socket.emit("start_game",{code:room.code});}},["ðŸš€ Start Game ("+teams.length+" à¸—à¸µà¸¡)"]);
+  wrap.appendChild(startBtn);return wrap;
+}
+
+function renderTeamLobby(){
+  const teams=Object.values(room?.teams||{});
+  const me=room?.teams?.[myId];
+  const wrap=h("div",{style:{minHeight:"100vh",background:`radial-gradient(ellipse at 30% 30%,#2A1760,${C.bg} 60%)`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px"}},[]);
+  wrap.appendChild(h("div",{style:{fontSize:"52px",marginBottom:"8px",textAlign:"center"}},[me?.emoji||"ðŸŒ¸"]));
+  wrap.appendChild(h("h2",{style:{fontSize:"20px",fontWeight:"900",color:me?.color||"#A78BFA",textAlign:"center",marginBottom:"6px"}},[me?.name||""]));
+  wrap.appendChild(h("p",{style:{color:C.sub,fontSize:"13px",textAlign:"center",marginBottom:"10px"}},["à¹€à¸‚à¹‰à¸²à¸£à¹ˆà¸§à¸¡à¸ªà¸³à¹€à¸£à¹‡à¸ˆ! à¸£à¸­à¸„à¸£à¸¹à¸à¸” Start..."]));
+  wrap.appendChild(h("div",{style:{background:C.card,borderRadius:"8px",padding:"5px 14px",fontSize:"13px",color:C.yellow,fontFamily:"monospace",marginBottom:"20px"}},[`à¸«à¹‰à¸­à¸‡: ${room?.code}`]));
+  const tl=h("div",{style:{background:C.panel,border:`1.5px solid ${C.border}`,borderRadius:"14px",padding:"16px",width:"100%",maxWidth:"320px",marginBottom:"18px"}},[h("div",{style:{fontSize:"12px",color:C.sub,fontWeight:"700",marginBottom:"10px"}},[`à¸—à¸µà¸¡à¹ƒà¸™à¸«à¹‰à¸­à¸‡ (${teams.length})`])]);
+  teams.forEach(t=>{tl.appendChild(h("div",{style:{display:"flex",alignItems:"center",gap:"9px",padding:"7px 0",borderBottom:`1px solid ${C.border}33`}},[h("span",{},[t.emoji]),h("span",{style:{color:t.id===myId?t.color:C.sub,fontWeight:t.id===myId?"700":"400",fontSize:"14px"}},[t.name+(t.id===myId?" ðŸ‘ˆ (à¸„à¸¸à¸“)":"")])]));});
+  wrap.appendChild(tl);
+  const dot=h("div",{style:{width:"8px",height:"8px",borderRadius:"50%",background:C.green,boxShadow:`0 0 8px ${C.green}`,animation:"pulse 1.2s ease infinite"}},[]);
+  wrap.appendChild(h("div",{style:{display:"flex",alignItems:"center",gap:"8px",color:C.sub,fontSize:"13px"}},[dot,"à¸£à¸­à¸„à¸£à¸¹à¹€à¸£à¸´à¹ˆà¸¡à¹€à¸à¸¡..."]));
+  return wrap;
+}
+
+function renderGame(){
+  const teams=Object.values(room?.teams||{});
+  const me=room?.teams?.[myId];
+  const sorted=[...teams].sort((a,b)=>b.pos-a.pos);
+  const myDone=me?.finished||false;
+  const hasPending=!!pendingQ;
+  const wrap=h("div",{style:{minHeight:"100vh",background:`radial-gradient(ellipse at 15% 15%,#2A1760,${C.bg} 58%)`,padding:"12px 10px"}},[]);
+  // header
+  wrap.appendChild(h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"12px"}},[
+    h("div",{},[h("div",{style:{fontSize:"15px",fontWeight:"900"}},["ðŸ à¸œà¸ˆà¸à¸ à¸±à¸¢à¹ƒà¸™ SHM Map"]),h("div",{style:{fontSize:"10px",color:C.sub}},["à¸«à¹‰à¸­à¸‡ ",h("b",{style:{color:C.yellow,fontFamily:"monospace"}},[room?.code||""]),` Â· ${teams.length} à¸—à¸µà¸¡`])]),
+    me?h("div",{style:{textAlign:"right"}},[h("span",{style:{fontSize:"22px"}},[me.emoji]),h("div",{style:{fontSize:"12px",color:me.color,fontWeight:"700"}},[me.name]),h("div",{style:{fontSize:"10px",color:C.sub}},[`à¸Šà¹ˆà¸­à¸‡à¸—à¸µà¹ˆ ${me.pos} / ${TOTAL}`])]):null,
+  ]));
+  const main=h("div",{style:{display:"flex",gap:"12px",flexWrap:"wrap",justifyContent:"center"}},[]);
+  // board
+  const boardWrap=h("div",{style:{background:C.panel,border:`2px solid ${C.border}`,borderRadius:"14px",padding:"10px"}},[makeBoard(teams,false)]);
+  const leg=h("div",{style:{display:"flex",gap:"12px",marginTop:"8px",flexWrap:"wrap"}},[]);
+  [["â“","à¹‚à¸ˆà¸—à¸¢à¹Œ"],["ðŸ’€","à¸–à¸­à¸¢âˆ’2"],["â­","à¸«à¸™à¹‰à¸²+2"],["ðŸ†","à¸Šà¸™à¸°"]].forEach(([ic,lb])=>{leg.appendChild(h("span",{style:{fontSize:"10px",color:C.sub}},[`${ic} ${lb}`]));});
+  boardWrap.appendChild(leg);main.appendChild(boardWrap);
+  // right panel
+  const right=h("div",{style:{display:"flex",flexDirection:"column",gap:"9px",minWidth:"185px",flex:"1",maxWidth:"220px"}},[]);
+  // progress
+  if(me){
+    const prog=h("div",{style:{background:C.card,border:`2px solid ${me.color}55`,borderRadius:"12px",padding:"10px 12px"}},[
+      h("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:"5px"}},[h("span",{style:{fontSize:"11px",color:me.color,fontWeight:"700"}},[`${me.emoji} ${me.name}`]),h("span",{style:{fontSize:"11px",color:C.sub}},[`${me.pos}/${TOTAL}`])]),
+    ]);
+    const bar=h("div",{style:{height:"6px",background:C.border,borderRadius:"4px",overflow:"hidden"}},[]);
+    bar.appendChild(h("div",{style:{height:"100%",background:me.color,borderRadius:"4px",width:`${((me.pos-1)/(TOTAL-1))*100}%`,transition:"width .5s"}}));
+    prog.appendChild(bar);
+    prog.appendChild(h("div",{style:{marginTop:"5px",fontSize:"10px",color:C.sub}},[`à¸„à¸§à¸²à¸¡à¸„à¸·à¸šà¸«à¸™à¹‰à¸² ${Math.round(((me.pos-1)/(TOTAL-1))*100)}%`]));
+    right.appendChild(prog);
+  }
+  // dice
+  const diceCard=h("div",{style:{background:C.card,border:`2px solid ${C.border}`,borderRadius:"12px",padding:"14px 10px",textAlign:"center"}},[]);
+  const diceFace=h("div",{id:"diceFace",style:{fontSize:"72px",lineHeight:"1",marginBottom:"6px",display:"inline-block",animation:rolling?"spin .06s linear infinite":"none",filter:diceVal&&!rolling?`drop-shadow(0 0 14px ${me?.color||C.purple}99)`:"none"}},[diceVal?FACES[diceVal]:"ðŸŽ²"]);
+  diceCard.appendChild(diceFace);
+  if(diceVal&&!rolling&&!hasPending&&!myDone){diceCard.appendChild(h("div",{style:{fontSize:"13px",fontWeight:"700",color:C.yellow,marginBottom:"8px",background:C.yellow+"11",borderRadius:"8px",padding:"4px 0"}},[`à¸—à¸­à¸¢à¹„à¸”à¹‰: ${diceVal} ${diceVal>=5?"ðŸŒŸ":"ðŸŽ¯"}`]));}
+  if(hasPending){diceCard.appendChild(h("div",{style:{fontSize:"12px",fontWeight:"700",color:C.yellow,marginBottom:"8px",animation:"pulse 1s ease infinite"}},["â“ à¸•à¸­à¸šà¸„à¸³à¸–à¸²à¸¡à¸à¹ˆà¸­à¸™à¸™à¸°à¸„à¸°!"]));}
+  if(myDone){diceCard.appendChild(h("div",{style:{fontSize:"13px",fontWeight:"700",color:C.green,marginBottom:"8px"}},["ðŸ† à¸„à¸¸à¸“à¸–à¸¶à¸‡à¹€à¸›à¹‰à¸²à¸«à¸¡à¸²à¸¢à¹à¸¥à¹‰à¸§!"]));}
+  const rollBtn=h("button",{
+    style:{background:(rolling||hasPending||myDone)?"#2D1B69":`linear-gradient(135deg,${me?.color||C.purple},${me?.color||C.pink})`,border:"none",borderRadius:"12px",padding:"13px 0",width:"100%",color:"#fff",fontSize:"15px",fontWeight:"700",cursor:(rolling||hasPending||myDone)?"not-allowed":"pointer",boxShadow:(rolling||hasPending||myDone)?"none":`0 4px 20px ${me?.color||C.purple}66`,opacity:(hasPending||myDone)?.5:1,fontFamily:"inherit",transition:"all .2s"},
+    onClick:()=>{
+      if(rolling||hasPending||myDone)return;
+      rolling=true;diceVal=null;render();
+      let c=0;
+      const iv=setInterval(()=>{
+        const v=Math.floor(Math.random()*6)+1;
+        diceVal=v;
+        const df=document.getElementById("diceFace");
+        if(df)df.textContent=FACES[v];
+        if(++c>=14){clearInterval(iv);rolling=false;socket.emit("roll_dice",{code:room.code});}
+      },65);
+    }
+  },[rolling?"â³ à¸à¸³à¸¥à¸±à¸‡à¸—à¸­à¸¢...":hasPending?"â³ à¸•à¸­à¸šà¸„à¸³à¸–à¸²à¸¡à¸à¹ˆà¸­à¸™":myDone?"ðŸ† à¸ˆà¸šà¹à¸¥à¹‰à¸§!":"ðŸŽ² à¸—à¸­à¸¢à¸¥à¸¹à¸à¹€à¸•à¹‹à¸²"]);
+  diceCard.appendChild(rollBtn);right.appendChild(diceCard);
+  // leaderboard
+  const lb=h("div",{style:{background:C.card,border:`1.5px solid ${C.border}`,borderRadius:"12px",padding:"10px 11px",flex:"1"}},[h("div",{style:{fontSize:"10px",color:C.sub,fontWeight:"700",marginBottom:"8px"}},["ðŸ… à¸­à¸±à¸™à¸”à¸±à¸š"])]);
+  sorted.forEach((t,i)=>{
+    lb.appendChild(h("div",{style:{display:"flex",alignItems:"center",gap:"6px",padding:"5px 0",borderBottom:`1px solid ${C.border}22`}},[
+      h("span",{style:{fontSize:"12px",width:"18px",textAlign:"center",color:C.sub}},["ðŸ¥‡ðŸ¥ˆðŸ¥‰"[i]||(i+1)+"."]),
+      h("span",{style:{fontSize:"15px"}},[t.emoji]),
+      h("div",{style:{flex:"1",minWidth:"0"}},[
+        h("div",{style:{fontSize:"11px",fontWeight:t.id===myId?"700":"400",color:t.id===myId?t.color:C.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},[t.name+(t.finished?" ðŸ†":"")+(t.id===myId?" ðŸ‘ˆ":"")]),
+        h("div",{style:{height:"3px",background:C.border,borderRadius:"3px",marginTop:"2px"}},[h("div",{style:{height:"100%",background:t.color,borderRadius:"3px",width:`${((t.pos-1)/(TOTAL-1))*100}%`,transition:"width .4s"}})])
+      ]),
+      h("span",{style:{fontSize:"10px",color:C.sub,fontFamily:"monospace",flexShrink:"0"}},[String(t.pos)]),
+    ]));
+  });
+  right.appendChild(lb);
+  // log
+  if(me?.log){
+    const logBox=h("div",{style:{background:C.card,border:`1.5px solid ${me.color}44`,borderRadius:"11px",padding:"8px 10px"}},[h("div",{style:{fontSize:"10px",color:C.sub,fontWeight:"700",marginBottom:"4px"}},["ðŸ“‹ à¸šà¸±à¸™à¸—à¸¶à¸à¸‚à¸­à¸‡à¸‰à¸±à¸™"])]);
+    me.log.slice(0,5).forEach((l,i)=>{logBox.appendChild(h("div",{style:{fontSize:"11px",color:i===0?C.text:"#4A3880",marginBottom:"2px",lineHeight:"1.4"}},[l]));});
+    right.appendChild(logBox);
+  }
+  main.appendChild(right);wrap.appendChild(main);
+  if(pendingQ&&me)wrap.appendChild(makeQModal(pendingQ,me.color,(idx)=>{socket.emit("answer_question",{code:room.code,answerIdx:idx});pendingQ=null;}));
+  if(showWin)wrap.appendChild(makeWinScreen(teams,()=>{showWin=false;render();}));
+  return wrap;
+}
+
+function renderHostDashboard(){
+  const teams=Object.values(room?.teams||{});
+  const sorted=[...teams].sort((a,b)=>b.pos-a.pos);
+  const wrap=h("div",{style:{minHeight:"100vh",background:`radial-gradient(ellipse at 10% 10%,#2A1760,${C.bg} 58%)`,padding:"14px 12px"}},[]);
+  wrap.appendChild(h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"12px"}},[
+    h("div",{},[h("div",{style:{fontSize:"16px",fontWeight:"900"}},["ðŸ‘©â€ðŸ« à¹à¸”à¸Šà¸šà¸­à¸£à¹Œà¸”à¸„à¸£à¸¹"]),h("div",{style:{fontSize:"11px",color:C.sub}},["à¸«à¹‰à¸­à¸‡ ",h("b",{style:{color:C.yellow,fontFamily:"monospace",fontSize:"13px"}},[room?.code||""]),` Â· ${teams.length} à¸—à¸µà¸¡`])]),
+    h("div",{style:{display:"flex",gap:"7px"}},[
+      h("button",{style:{background:"none",border:`1px solid ${C.border}`,borderRadius:"8px",padding:"6px 12px",color:C.sub,fontSize:"11px"},onClick:()=>{screen="host_lobby";render();}},["â† Lobby"]),
+      h("button",{style:{background:`linear-gradient(135deg,${C.red},#B91C1C)`,border:"none",borderRadius:"8px",padding:"6px 13px",color:"#fff",fontSize:"11px",fontWeight:"700"},onClick:()=>{socket.emit("reset_game",{code:room.code});}},["ðŸ”„ à¸£à¸µà¹€à¸‹à¹‡à¸•"]),
+    ]),
+  ]));
+  const main=h("div",{style:{display:"flex",gap:"12px",flexWrap:"wrap",alignItems:"flex-start"}},[]);
+  main.appendChild(h("div",{style:{background:C.panel,border:`2px solid ${C.border}`,borderRadius:"14px",padding:"10px"}},[h("div",{style:{fontSize:"10px",color:C.sub,fontWeight:"700",marginBottom:"8px"}},["ðŸ“ à¸ à¸²à¸žà¸£à¸§à¸¡à¸à¸£à¸°à¸”à¸²à¸™"]),makeBoard(teams,true)]));
+  const right=h("div",{style:{flex:"1",minWidth:"240px",display:"flex",flexDirection:"column",gap:"10px"}},[]);
+  const stats=h("div",{style:{background:C.panel,border:`1.5px solid ${C.border}`,borderRadius:"12px",padding:"12px 14px",display:"flex",gap:"16px",flexWrap:"wrap"}},[]);
+  [["à¸—à¸µà¸¡à¸—à¸±à¹‰à¸‡à¸«à¸¡à¸”",teams.length,"#A78BFA"],["à¸ˆà¸šà¹à¸¥à¹‰à¸§",teams.filter(t=>t.finished).length,C.green],["à¸à¸³à¸¥à¸±à¸‡à¸•à¸­à¸š",teams.filter(t=>t.pendingQ).length,C.yellow],["à¹‚à¸ˆà¸—à¸¢à¹Œ","11/30",C.cyan]].forEach(([lb,v,col])=>{stats.appendChild(h("div",{style:{textAlign:"center"}},[h("div",{style:{fontSize:"22px",fontWeight:"900",color:col}},[String(v)]),h("div",{style:{fontSize:"10px",color:C.sub}},[lb])]));});
+  right.appendChild(stats);
+  const teamBox=h("div",{style:{background:C.panel,border:`1.5px solid ${C.border}`,borderRadius:"12px",padding:"12px 13px"}},[h("div",{style:{fontSize:"11px",color:C.sub,fontWeight:"700",marginBottom:"10px"}},["ðŸ… à¸­à¸±à¸™à¸”à¸±à¸šà¸—à¸µà¸¡"])]);
+  sorted.forEach((t,i)=>{
+    teamBox.appendChild(h("div",{style:{background:C.card,borderRadius:"9px",padding:"9px 11px",marginBottom:"7px",border:`1.5px solid ${t.color}33`,display:"flex",alignItems:"center",gap:"8px"}},[
+      h("span",{style:{fontSize:"13px",width:"19px",textAlign:"center"}},[["ðŸ¥‡","ðŸ¥ˆ","ðŸ¥‰"][i]||(i+1)+"."]),
+      h("span",{style:{fontSize:"18px"}},[t.emoji]),
+      h("div",{style:{flex:"1",minWidth:"0"}},[
+        h("div",{style:{fontWeight:"700",color:t.color,fontSize:"12px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},[t.name+(t.finished?" ðŸ†":"")]),
+        h("div",{style:{height:"4px",background:C.border,borderRadius:"3px",marginTop:"2px"}},[h("div",{style:{height:"100%",background:t.color,borderRadius:"3px",width:`${((t.pos-1)/(TOTAL-1))*100}%`,transition:"width .4s"}})]),
+        h("div",{style:{fontSize:"10px",color:C.sub,marginTop:"2px"}},[`à¸Šà¹ˆà¸­à¸‡ ${t.pos}/${TOTAL}`,t.pendingQ?h("span",{style:{color:C.yellow,marginLeft:"6px"}},["â³ à¸à¸³à¸¥à¸±à¸‡à¸•à¸­à¸š"]):null]),
+      ]),
+      h("button",{style:{background:"none",border:`1px solid ${C.red}55`,borderRadius:"6px",padding:"3px 8px",color:C.red,fontSize:"10px"},onClick:()=>socket.emit("kick_team",{code:room.code,teamId:t.id})},["à¸™à¸³à¸­à¸­à¸"]),
+    ]));
+  });
+  if(!teams.length)teamBox.appendChild(h("div",{style:{color:C.border,fontSize:"13px",textAlign:"center",padding:"10px 0"}},["à¸¢à¸±à¸‡à¹„à¸¡à¹ˆà¸¡à¸µà¸—à¸µà¸¡"]));
+  right.appendChild(teamBox);
+  const logBox=h("div",{style:{background:C.panel,border:`1.5px solid ${C.border}`,borderRadius:"12px",padding:"10px 12px"}},[h("div",{style:{fontSize:"10px",color:C.sub,fontWeight:"700",marginBottom:"8px"}},["ðŸ“‹ à¸šà¸±à¸™à¸—à¸¶à¸à¸¥à¹ˆà¸²à¸ªà¸¸à¸”"])]);
+  teams.flatMap(t=>(t.log||[]).slice(0,2).map((l,i)=>({key:`${t.id}-${i}`,emoji:t.emoji,color:t.color,name:t.name,msg:l}))).slice(0,8).forEach(item=>{logBox.appendChild(h("div",{style:{display:"flex",gap:"5px",marginBottom:"4px",fontSize:"10px"}},[h("span",{},[item.emoji]),h("span",{style:{color:item.color,fontWeight:"700",flexShrink:"0"}},[item.name+":"]),h("span",{style:{color:C.sub}},[item.msg])]));});
+  if(!teams.length)logBox.appendChild(h("div",{style:{color:C.border,fontSize:"11px"}},["à¸¢à¸±à¸‡à¹„à¸¡à¹ˆà¸¡à¸µà¸à¸´à¸ˆà¸à¸£à¸£à¸¡"]));
+  right.appendChild(logBox);
+  main.appendChild(right);wrap.appendChild(main);
+  if(showWin)wrap.appendChild(makeWinScreen(teams,()=>{showWin=false;render();}));
+  return wrap;
+}
+
+// â”€â”€ RENDER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function render(){
+  const app=document.getElementById("app");
+  const errbar=document.getElementById("errbar");
+  app.innerHTML="";
+  if(errbar)app.appendChild(errbar);
+  let view;
+  if(screen==="landing")           view=renderLanding();
+  else if(screen==="host_lobby")   view=renderHostLobby();
+  else if(screen==="team_lobby")   view=renderTeamLobby();
+  else if(screen==="game")         view=renderGame();
+  else if(screen==="host_dashboard")view=renderHostDashboard();
+  if(view)app.appendChild(view);
+}
+
+// â”€â”€ INIT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+window.addEventListener("DOMContentLoaded",()=>{
+  const errbar=h("div",{id:"errbar",style:{display:"none",position:"fixed",top:"14px",left:"50%",transform:"translateX(-50%)",background:"#250808",border:`1.5px solid ${C.red}`,borderRadius:"10px",padding:"9px 18px",color:"#FCA5A5",fontSize:"13px",cursor:"pointer",zIndex:"9999",boxShadow:`0 4px 20px ${C.red}44`,whiteSpace:"nowrap"}},[]);
+  errbar.addEventListener("click",()=>errbar.style.display="none");
+  document.getElementById("app").appendChild(errbar);
+  initSocket();render();
+});
 </script>
 </body>
 </html>
-
