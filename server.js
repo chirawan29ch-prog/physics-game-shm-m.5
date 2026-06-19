@@ -8,25 +8,27 @@ const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.static(path.join(__dirname, "public")));
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
 
-// ── GAME DATA ────────────────────────────────────────────────────────────────
 const TOTAL = 30;
 const Q_STEPS = new Set([3,6,9,12,15,17,20,22,24,26,28]);
 const TRAPS   = new Set([5,11,16,23,27]);
 const BOOSTS  = new Set([7,13,19,25]);
 
 const QUESTIONS = [
-  { step:3,  q:"การเคลื่อนที่แบบ SHM เกิดขึ้นเมื่อแรงลัพธ์เป็นอย่างไร?", ch:["คงที่ตลอดเวลา","แปรผันตรงกับการกระจัด พุ่งเข้าหาสมดุล","แปรผันตรงกับความเร็ว","เป็นศูนย์ตลอดเวลา"], ans:1, hint:"F = −kx แรงพุ่งเข้าหาสมดุลเสมอ", type:"ทฤษฎี" },
-  { step:6,  q:"ลูกตุ้มเชือกยาว 40 cm แกว่งบนดาวที่ g = 4.9 m/s² คาบ T = ?", ch:["0.90 s","1.26 s","1.79 s","2.00 s"], ans:2, hint:"T = 2π√(L/g) = 2π√(0.4/4.9) ≈ 1.79 s", type:"คำนวณ" },
-  { step:9,  q:"สปริง k = 400 N/m ติดมวล 1 kg ความถี่ f = ?", ch:["2.0 Hz","3.2 Hz","6.3 Hz","20.0 Hz"], ans:1, hint:"f = (1/2π)√(k/m) = (1/2π)√400 ≈ 3.18 Hz", type:"คำนวณ" },
-  { step:12, q:"ถ้าวัตถุเริ่มที่ตำแหน่งสมดุล กราฟ x(t) มีรูปแบบใด?", ch:["A cos(ωt)","A sin(ωt)","A tan(ωt)","เส้นตรง"], ans:1, hint:"เริ่มที่ x = 0 → x = A sin(ωt)", type:"ทฤษฎี" },
-  { step:15, q:"สปริง k = 500 N/m มวล 2 kg แอมพลิจูด 8 cm v_max = ?", ch:["0.63 m/s","1.26 m/s","2.00 m/s","4.00 m/s"], ans:1, hint:"v_max = A√(k/m) = 0.08×√250 ≈ 1.26 m/s", type:"คำนวณ" },
-  { step:17, q:"ณ ตำแหน่งใดที่พลังงานจลน์ = พลังงานศักย์ใน SHM?", ch:["ที่ตำแหน่งสมดุล x=0","ที่ x = ±A","ที่ x = ±A/√2","ที่ x = ±A/2"], ans:2, hint:"½mv² = ½kx² → x = A/√2 ≈ 0.707A", type:"ทฤษฎี" },
-  { step:20, q:"มวล 0.4 kg สปริง k = 160 N/m แอมพลิจูด 6 cm a_max = ?", ch:["12 m/s²","24 m/s²","48 m/s²","96 m/s²"], ans:1, hint:"a_max = (k/m)·A = (160/0.4)×0.06 = 24 m/s²", type:"คำนวณ" },
-  { step:22, q:"เพิ่มมวลที่ติดสปริงเป็น 4 เท่า คาบจะเปลี่ยนอย่างไร?", ch:["เพิ่มเป็น 2 เท่า","เพิ่มเป็น 4 เท่า","ลดเหลือครึ่งหนึ่ง","ไม่เปลี่ยนแปลง"], ans:0, hint:"T = 2π√(m/k) → m×4 → T×√4 = 2T", type:"ทฤษฎี" },
-  { step:24, q:"สปริง k = 300 N/m แอมพลิจูด 10 cm พลังงานกลรวม E = ?", ch:["0.75 J","1.50 J","3.00 J","6.00 J"], ans:1, hint:"E = ½kA² = ½×300×(0.1)² = 1.50 J", type:"คำนวณ" },
-  { step:26, q:"ตัดเชือกลูกตุ้มให้สั้นลงเหลือ 1/4 คาบจะเปลี่ยนอย่างไร?", ch:["ลดเหลือ 1/4","ลดเหลือ 1/2","เพิ่มเป็น 2 เท่า","ไม่เปลี่ยนแปลง"], ans:1, hint:"T = 2π√(L/g) → L×(1/4) → T×½", type:"ทฤษฎี" },
-  { step:28, q:"SHM แอมพลิจูด 10 cm ω = 5 rad/s ที่ x = 6 cm ความเร็ว v = ?", ch:["0.32 m/s","0.40 m/s","0.50 m/s","0.60 m/s"], ans:1, hint:"v = ω√(A²−x²) = 5×√(0.01−0.0036) = 5×0.08 = 0.40 m/s", type:"คำนวณ" },
+  { step:3,  q:"การเคลื่อนที่แบบ SHM เกิดขึ้นเมื่อแรงลัพธ์ที่กระทำต่อวัตถุเป็นอย่างไร?", ch:["คงที่ตลอดเวลา","แปรผันตรงกับการกระจัด พุ่งเข้าหาสมดุล","แปรผันตรงกับความเร็ว","เป็นศูนย์ตลอดเวลา"], ans:1, hint:"F = −kx แรงพุ่งเข้าหาตำแหน่งสมดุลเสมอ" },
+  { step:6,  q:"ลูกตุ้มเชือกยาว 40 cm แกว่งบนดาวที่ g = 4.9 m/s² คาบ T = ?", ch:["0.90 s","1.26 s","1.79 s","2.00 s"], ans:2, hint:"T = 2π√(L/g) = 2π√(0.4/4.9) ≈ 1.79 s" },
+  { step:9,  q:"สปริง k = 400 N/m ติดมวล 1 kg ความถี่ f = ?", ch:["2.0 Hz","3.2 Hz","6.3 Hz","20.0 Hz"], ans:1, hint:"f = (1/2π)√(k/m) = (1/2π)√400 ≈ 3.18 Hz" },
+  { step:12, q:"ถ้าวัตถุเริ่มต้นที่ตำแหน่งสมดุล กราฟ x(t) มีรูปแบบใด?", ch:["A cos(ωt)","A sin(ωt)","A tan(ωt)","เส้นตรง"], ans:1, hint:"เริ่มที่ x = 0 → x = A sin(ωt)" },
+  { step:15, q:"สปริง k = 500 N/m มวล 2 kg แอมพลิจูด 8 cm อัตราเร็วสูงสุด v_max = ?", ch:["0.63 m/s","1.26 m/s","2.00 m/s","4.00 m/s"], ans:1, hint:"v_max = A√(k/m) = 0.08×√250 ≈ 1.26 m/s" },
+  { step:17, q:"ตำแหน่งใดใน SHM ที่พลังงานจลน์ = พลังงานศักย์?", ch:["x = 0","x = ±A","x = ±A/√2","x = ±A/2"], ans:2, hint:"½mv² = ½kx² → x = A/√2 ≈ 0.707A" },
+  { step:20, q:"มวล 0.4 kg สปริง k = 160 N/m แอมพลิจูด 6 cm ความเร่งสูงสุด a_max = ?", ch:["12 m/s²","24 m/s²","48 m/s²","96 m/s²"], ans:1, hint:"a_max = (k/m)·A = (160/0.4)×0.06 = 24 m/s²" },
+  { step:22, q:"ถ้าเพิ่มมวลที่ติดสปริงเป็น 4 เท่า คาบจะเปลี่ยนแปลงอย่างไร?", ch:["เพิ่มเป็น 2 เท่า","เพิ่มเป็น 4 เท่า","ลดเหลือครึ่งหนึ่ง","ไม่เปลี่ยนแปลง"], ans:0, hint:"T = 2π√(m/k) → m×4 → T×√4 = 2T" },
+  { step:24, q:"สปริง k = 300 N/m แอมพลิจูด 10 cm พลังงานกลรวม E = ?", ch:["0.75 J","1.50 J","3.00 J","6.00 J"], ans:1, hint:"E = ½kA² = ½×300×(0.1)² = 1.50 J" },
+  { step:26, q:"ตัดเชือกลูกตุ้มให้สั้นลงเหลือ 1/4 คาบจะเปลี่ยนอย่างไร?", ch:["ลดเหลือ 1/4","ลดเหลือ 1/2","เพิ่มเป็น 2 เท่า","ไม่เปลี่ยนแปลง"], ans:1, hint:"T = 2π√(L/g) → L×(1/4) → T×(1/2)" },
+  { step:28, q:"SHM แอมพลิจูด 10 cm ω = 5 rad/s ที่ตำแหน่ง x = 6 cm อัตราเร็ว v = ?", ch:["0.32 m/s","0.40 m/s","0.50 m/s","0.60 m/s"], ans:1, hint:"v = ω√(A²−x²) = 5×√(0.01−0.0036) = 5×0.08 = 0.40 m/s" },
 ];
 
 const PALETTE = [
@@ -35,7 +37,6 @@ const PALETTE = [
   {color:"#A78BFA",emoji:"🔮"},{color:"#EF4444",emoji:"🔥"},
 ];
 
-// ── ROOMS ────────────────────────────────────────────────────────────────────
 const rooms = {};
 
 function makeCode() {
@@ -47,7 +48,6 @@ function broadcast(code) {
   io.to(code).emit("room_update", rooms[code]);
 }
 
-// ── SOCKET ───────────────────────────────────────────────────────────────────
 io.on("connection", (socket) => {
 
   socket.on("create_room", () => {
@@ -114,30 +114,37 @@ io.on("connection", (socket) => {
     const room = rooms[code];
     if (!room || room.status !== "playing") return;
     const t = room.teams[socket.id];
+    // ❌ ห้ามทอยถ้ายังมีคำถามค้างอยู่
     if (!t || t.pendingQ || t.finished) return;
 
     const roll = Math.floor(Math.random()*6)+1;
     let newPos = Math.min(t.pos+roll, TOTAL);
-    t.log.unshift(`🎲 ทอยได้ ${roll} → ช่อง ${newPos}`);
+    t.log.unshift(`🎲 ทอยได้ ${roll} → ไปช่องที่ ${newPos}`);
 
+    // ถ้าเดินถึงช่องคำถาม → หยุดรอตอบก่อน ไม่เดินต่อ
     const q = QUESTIONS.find(q => q.step === newPos);
     if (q) {
-      t.pos = newPos; t.pendingQ = newPos;
-      t.log.unshift(`❓ เจอโจทย์${q.type}! ช่อง ${newPos}`);
-    } else {
       t.pos = newPos;
-      if (TRAPS.has(newPos)) {
-        t.pos = Math.max(1, newPos-2);
-        t.log.unshift(`💀 กับดัก! ถอย 2 → ช่อง ${t.pos}`);
-      } else if (BOOSTS.has(newPos)) {
-        t.pos = Math.min(TOTAL, newPos+2);
-        t.log.unshift(`⭐ บูสต์! เดินหน้า 2 → ช่อง ${t.pos}`);
-      }
-      if (t.pos >= TOTAL) {
-        t.finished=true; t.finishedAt=Date.now();
-        t.log.unshift("🏆 ค้นพบขุมทรัพย์แล้ว!");
-        io.to(code).emit("team_finished", { name: t.name, emoji: t.emoji });
-      }
+      t.pendingQ = newPos;
+      t.log.unshift(`❓ เจอคำถามช่องที่ ${newPos}! ตอบก่อนแล้วค่อยทอยต่อ`);
+      broadcast(code);
+      return;
+    }
+
+    // ช่องปกติ กับดัก บูสต์
+    t.pos = newPos;
+    if (TRAPS.has(newPos)) {
+      t.pos = Math.max(1, newPos-2);
+      t.log.unshift(`💀 กับดัก! ถอยหลัง 2 ช่อง → ช่องที่ ${t.pos}`);
+    } else if (BOOSTS.has(newPos)) {
+      t.pos = Math.min(TOTAL, newPos+2);
+      t.log.unshift(`⭐ บูสต์! เดินหน้า 2 ช่อง → ช่องที่ ${t.pos}`);
+    }
+
+    if (t.pos >= TOTAL) {
+      t.finished = true; t.finishedAt = Date.now();
+      t.log.unshift("🏆 ถึงเป้าหมายแล้ว!");
+      io.to(code).emit("team_finished", { name: t.name, emoji: t.emoji });
     }
     broadcast(code);
   });
@@ -148,13 +155,21 @@ io.on("connection", (socket) => {
     const t = room.teams[socket.id];
     if (!t || !t.pendingQ) return;
     const q = QUESTIONS.find(q => q.step === t.pendingQ);
+    if (!q) { t.pendingQ = null; broadcast(code); return; }
+
     t.pendingQ = null;
+
     if (answerIdx === q.ans) {
-      t.log.unshift("✅ ตอบถูก! เดินต่อได้เลย 🌸");
-      if (t.pos >= TOTAL) { t.finished=true; t.finishedAt=Date.now(); t.log.unshift("🏆 ชนะ!"); }
+      // ✅ ตอบถูก → ยังอยู่ที่ช่องเดิม รอทอยลูกเต๋าต่อ
+      t.log.unshift("✅ ตอบถูก! ทอยลูกเต๋าต่อได้เลย 🌸");
+      if (t.pos >= TOTAL) {
+        t.finished = true; t.finishedAt = Date.now();
+        t.log.unshift("🏆 ถึงเป้าหมายแล้ว!");
+      }
     } else {
-      const back = Math.max(1, t.pos-3);
-      t.log.unshift(`❌ ตอบผิด! ถอย 3 → ช่อง ${back}`);
+      // ❌ ตอบผิด → ถอยหลัง 3 ช่อง
+      const back = Math.max(1, t.pos - 3);
+      t.log.unshift(`❌ ตอบผิด! ถอยหลัง 3 ช่อง → ช่องที่ ${back}`);
       t.pos = back;
     }
     broadcast(code);
@@ -178,7 +193,6 @@ io.on("connection", (socket) => {
   });
 });
 
-// cleanup rooms older than 3h
 setInterval(() => {
   const cut = Date.now() - 3*60*60*1000;
   Object.keys(rooms).forEach(code => {
@@ -189,3 +203,4 @@ setInterval(() => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log("🚀 Server running on port", PORT));
+
