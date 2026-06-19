@@ -18,23 +18,26 @@ const TRAPS   = new Set([5,11,16,23,27]);
 const BOOSTS  = new Set([7,13,19,25]);
 
 const QUESTIONS = [
-  { step:3,  q:"การเคลื่อนที่แบบ SHM เกิดขึ้นเมื่อแรงลัพธ์ที่กระทำต่อวัตถุเป็นอย่างไร?", ch:["คงที่ตลอดเวลา","แปรผันตรงกับการกระจัด พุ่งเข้าหาสมดุล","แปรผันตรงกับความเร็ว","เป็นศูนย์ตลอดเวลา"], ans:1, hint:"F = −kx แรงพุ่งเข้าหาตำแหน่งสมดุลเสมอ" },
-  { step:6,  q:"ลูกตุ้มเชือกยาว 40 cm แกว่งบนดาวที่ g = 4.9 m/s² คาบ T = ?", ch:["0.90 s","1.26 s","1.79 s","2.00 s"], ans:2, hint:"T = 2π√(L/g) = 2π√(0.4/4.9) ≈ 1.79 s" },
-  { step:9,  q:"สปริง k = 400 N/m ติดมวล 1 kg ความถี่ f = ?", ch:["2.0 Hz","3.2 Hz","6.3 Hz","20.0 Hz"], ans:1, hint:"f = (1/2π)√(k/m) = (1/2π)√400 ≈ 3.18 Hz" },
-  { step:12, q:"ถ้าวัตถุเริ่มต้นที่ตำแหน่งสมดุล กราฟ x(t) มีรูปแบบใด?", ch:["A cos(ωt)","A sin(ωt)","A tan(ωt)","เส้นตรง"], ans:1, hint:"เริ่มที่ x = 0 → x = A sin(ωt)" },
-  { step:15, q:"สปริง k = 500 N/m มวล 2 kg แอมพลิจูด 8 cm อัตราเร็วสูงสุด v_max = ?", ch:["0.63 m/s","1.26 m/s","2.00 m/s","4.00 m/s"], ans:1, hint:"v_max = A√(k/m) = 0.08×√250 ≈ 1.26 m/s" },
-  { step:17, q:"ตำแหน่งใดใน SHM ที่พลังงานจลน์ = พลังงานศักย์?", ch:["x = 0","x = ±A","x = ±A/√2","x = ±A/2"], ans:2, hint:"½mv² = ½kx² → x = A/√2 ≈ 0.707A" },
-  { step:20, q:"มวล 0.4 kg สปริง k = 160 N/m แอมพลิจูด 6 cm ความเร่งสูงสุด a_max = ?", ch:["12 m/s²","24 m/s²","48 m/s²","96 m/s²"], ans:1, hint:"a_max = (k/m)·A = (160/0.4)×0.06 = 24 m/s²" },
-  { step:22, q:"ถ้าเพิ่มมวลที่ติดสปริงเป็น 4 เท่า คาบจะเปลี่ยนแปลงอย่างไร?", ch:["เพิ่มเป็น 2 เท่า","เพิ่มเป็น 4 เท่า","ลดเหลือครึ่งหนึ่ง","ไม่เปลี่ยนแปลง"], ans:0, hint:"T = 2π√(m/k) → m×4 → T×√4 = 2T" },
-  { step:24, q:"สปริง k = 300 N/m แอมพลิจูด 10 cm พลังงานกลรวม E = ?", ch:["0.75 J","1.50 J","3.00 J","6.00 J"], ans:1, hint:"E = ½kA² = ½×300×(0.1)² = 1.50 J" },
-  { step:26, q:"ตัดเชือกลูกตุ้มให้สั้นลงเหลือ 1/4 คาบจะเปลี่ยนอย่างไร?", ch:["ลดเหลือ 1/4","ลดเหลือ 1/2","เพิ่มเป็น 2 เท่า","ไม่เปลี่ยนแปลง"], ans:1, hint:"T = 2π√(L/g) → L×(1/4) → T×(1/2)" },
-  { step:28, q:"SHM แอมพลิจูด 10 cm ω = 5 rad/s ที่ตำแหน่ง x = 6 cm อัตราเร็ว v = ?", ch:["0.32 m/s","0.40 m/s","0.50 m/s","0.60 m/s"], ans:1, hint:"v = ω√(A²−x²) = 5×√(0.01−0.0036) = 5×0.08 = 0.40 m/s" },
+  { step:3,  ans:1 },
+  { step:6,  ans:2 },
+  { step:9,  ans:1 },
+  { step:12, ans:1 },
+  { step:15, ans:1 },
+  { step:17, ans:2 },
+  { step:20, ans:1 },
+  { step:22, ans:0 },
+  { step:24, ans:1 },
+  { step:26, ans:1 },
+  { step:28, ans:1 },
 ];
 
 const PALETTE = [
-  {color:"#EC4899",emoji:"🌸"},{color:"#06B6D4",emoji:"🌊"},
-  {color:"#10B981",emoji:"🍀"},{color:"#F59E0B",emoji:"⚡"},
-  {color:"#A78BFA",emoji:"🔮"},{color:"#EF4444",emoji:"🔥"},
+  {color:"#EC4899",emoji:"🌸"},
+  {color:"#06B6D4",emoji:"🌊"},
+  {color:"#10B981",emoji:"🍀"},
+  {color:"#F59E0B",emoji:"⚡"},
+  {color:"#A78BFA",emoji:"🔮"},
+  {color:"#EF4444",emoji:"🔥"},
 ];
 
 const rooms = {};
@@ -68,11 +71,15 @@ io.on("connection", (socket) => {
     const style = PALETTE[count % PALETTE.length];
     const tid = socket.id;
     room.teams[tid] = {
-      id: tid, name: teamName.trim().slice(0,20),
-      color: style.color, emoji: style.emoji,
-      pos: 1, log: [`${style.emoji} ${teamName.trim()} เข้าร่วมแล้ว!`],
-      pendingQ: null, lastRoll: null,
-      finished: false, finishedAt: null,
+      id: tid,
+      name: teamName.trim().slice(0, 20),
+      color: style.color,
+      emoji: style.emoji,
+      pos: 1,
+      log: [`${style.emoji} ${teamName.trim()} เข้าร่วมแล้ว!`],
+      pendingQ: null,
+      finished: false,
+      finishedAt: null,
     };
     socket.join(code);
     socket.data.code = code;
@@ -101,33 +108,36 @@ io.on("connection", (socket) => {
     const room = rooms[code];
     if (!room) return;
     Object.values(room.teams).forEach(t => {
-      t.pos=1; t.log=[`${t.emoji} รีเซ็ต!`];
-      t.pendingQ=null; t.lastRoll=null;
-      t.finished=false; t.finishedAt=null;
+      t.pos = 1;
+      t.log = [`${t.emoji} รีเซ็ต!`];
+      t.pendingQ = null;
+      t.finished = false;
+      t.finishedAt = null;
     });
     room.status = "playing";
     broadcast(code);
   });
 
-  // ── SERVER ทอยลูกเต๋าเอง และส่งผลกลับ client ──
+  // ── ROLL: server ทอยเท่านั้น ──────────────────────────────────────────────
   socket.on("roll_dice", ({ code }) => {
     const room = rooms[code];
     if (!room || room.status !== "playing") return;
     const t = room.teams[socket.id];
+
+    // ❌ ห้ามทอยถ้ายังมีคำถามค้างหรือจบแล้ว
     if (!t || t.pendingQ || t.finished) return;
 
-    // server ทอยเอง 100%
+    // server ทอยลูกเต๋า 1 ครั้งเท่านั้น
     const roll = Math.floor(Math.random() * 6) + 1;
     const oldPos = t.pos;
-    let newPos = Math.min(oldPos + roll, TOTAL);
+    const newPos = Math.min(oldPos + roll, TOTAL);
 
-    t.log.unshift(`🎲 ทอยได้ ${roll} → จากช่อง ${oldPos} ไปช่อง ${newPos}`);
-    t.lastRoll = roll;
+    t.log.unshift(`🎲 ทอยได้ ${roll} → จากช่องที่ ${oldPos} ไปช่องที่ ${newPos}`);
 
-    // ส่งผลลูกเต๋ากลับ client ก่อน (เพื่อโชว์ animation)
-    socket.emit("dice_result", { roll, newPos });
+    // ส่งผลลูกเต๋ากลับให้ client ก่อน (เพื่อเล่น animation)
+    socket.emit("dice_result", { roll });
 
-    // ถ้าเดินถึงช่องคำถาม → หยุดรอตอบ
+    // ตรวจช่องคำถาม
     const q = QUESTIONS.find(q => q.step === newPos);
     if (q) {
       t.pos = newPos;
@@ -141,22 +151,26 @@ io.on("connection", (socket) => {
     t.pos = newPos;
 
     if (TRAPS.has(newPos)) {
-      t.pos = Math.max(1, newPos - 2);
-      t.log.unshift(`💀 กับดัก! ถอยหลัง 2 ช่อง → ช่องที่ ${t.pos}`);
+      const back = Math.max(1, newPos - 2);
+      t.pos = back;
+      t.log.unshift(`💀 กับดัก! ถอยหลัง 2 → ช่องที่ ${back}`);
     } else if (BOOSTS.has(newPos)) {
-      t.pos = Math.min(TOTAL, newPos + 2);
-      t.log.unshift(`⭐ บูสต์! เดินหน้า 2 ช่อง → ช่องที่ ${t.pos}`);
+      const fwd = Math.min(TOTAL, newPos + 2);
+      t.pos = fwd;
+      t.log.unshift(`⭐ บูสต์! เดินหน้า 2 → ช่องที่ ${fwd}`);
     }
 
     if (t.pos >= TOTAL) {
-      t.finished = true; t.finishedAt = Date.now();
+      t.pos = TOTAL;
+      t.finished = true;
+      t.finishedAt = Date.now();
       t.log.unshift("🏆 ถึงเป้าหมายแล้ว!");
     }
 
     broadcast(code);
   });
 
-  // ── ตอบคำถาม ──
+  // ── ANSWER ────────────────────────────────────────────────────────────────
   socket.on("answer_question", ({ code, answerIdx }) => {
     const room = rooms[code];
     if (!room) return;
@@ -166,20 +180,21 @@ io.on("connection", (socket) => {
     const q = QUESTIONS.find(q => q.step === t.pendingQ);
     if (!q) { t.pendingQ = null; broadcast(code); return; }
 
-    t.pendingQ = null;
+    t.pendingQ = null; // ล้างคำถามค้างทุกกรณี
 
     if (answerIdx === q.ans) {
-      // ✅ ตอบถูก → อยู่ที่ช่องเดิม รอทอยต่อ
+      // ✅ ตอบถูก → ยังอยู่ช่องเดิม รอทอยต่อ
       t.log.unshift("✅ ตอบถูก! ทอยลูกเต๋าต่อได้เลย 🌸");
       if (t.pos >= TOTAL) {
-        t.finished = true; t.finishedAt = Date.now();
+        t.finished = true;
+        t.finishedAt = Date.now();
         t.log.unshift("🏆 ถึงเป้าหมายแล้ว!");
       }
     } else {
       // ❌ ตอบผิด → ถอยหลัง 3 ช่อง
       const back = Math.max(1, t.pos - 3);
-      t.log.unshift(`❌ ตอบผิด! ถอยหลัง 3 ช่อง → ช่องที่ ${back}`);
       t.pos = back;
+      t.log.unshift(`❌ ตอบผิด! ถอยหลัง 3 ช่อง → ช่องที่ ${back}`);
     }
 
     broadcast(code);
@@ -203,14 +218,14 @@ io.on("connection", (socket) => {
   });
 });
 
+// cleanup rooms > 3h
 setInterval(() => {
-  const cut = Date.now() - 3*60*60*1000;
+  const cut = Date.now() - 3 * 60 * 60 * 1000;
   Object.keys(rooms).forEach(code => {
     if (!rooms[code]._ts) rooms[code]._ts = Date.now();
     if (rooms[code]._ts < cut) delete rooms[code];
   });
-}, 60*60*1000);
+}, 60 * 60 * 1000);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log("🚀 Server running on port", PORT));
-
