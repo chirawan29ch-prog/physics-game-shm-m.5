@@ -38,12 +38,24 @@ const QUESTIONS = [
 ];
 
 const PALETTE = [
-  {color:"#EC4899",emoji:"🌸"},
-  {color:"#06B6D4",emoji:"🌊"},
-  {color:"#10B981",emoji:"🍀"},
-  {color:"#F59E0B",emoji:"⚡"},
-  {color:"#A78BFA",emoji:"🔮"},
-  {color:"#EF4444",emoji:"🔥"},
+  {color:"#EC4899",emoji:"🌸"},{color:"#06B6D4",emoji:"🌊"},
+  {color:"#10B981",emoji:"🍀"},{color:"#F59E0B",emoji:"⚡"},
+  {color:"#A78BFA",emoji:"🔮"},{color:"#EF4444",emoji:"🔥"},
+  {color:"#F97316",emoji:"🦊"},{color:"#84CC16",emoji:"🌿"},
+  {color:"#14B8A6",emoji:"🐢"},{color:"#8B5CF6",emoji:"🦄"},
+  {color:"#F43F5E",emoji:"🌹"},{color:"#0EA5E9",emoji:"🐬"},
+  {color:"#22C55E",emoji:"🐸"},{color:"#EAB308",emoji:"🌟"},
+  {color:"#6366F1",emoji:"🔷"},{color:"#D946EF",emoji:"🦋"},
+  {color:"#FB923C",emoji:"🍊"},{color:"#4ADE80",emoji:"🌱"},
+  {color:"#38BDF8",emoji:"❄️"},{color:"#C084FC",emoji:"🍇"},
+  {color:"#FB7185",emoji:"🌺"},{color:"#34D399",emoji:"🐉"},
+  {color:"#FBBF24",emoji:"🌻"},{color:"#60A5FA",emoji:"🐳"},
+  {color:"#F472B6",emoji:"🦩"},{color:"#A3E635",emoji:"🥝"},
+  {color:"#2DD4BF",emoji:"🐠"},{color:"#E879F9",emoji:"🦚"},
+  {color:"#FCA5A5",emoji:"🍓"},{color:"#6EE7B7",emoji:"🌴"},
+  {color:"#93C5FD",emoji:"🐧"},{color:"#DDD6FE",emoji:"🌙"},
+  {color:"#FDE68A",emoji:"🌈"},{color:"#FBCFE8",emoji:"🦢"},
+  {color:"#BAE6FD",emoji:"🐋"},
 ];
 
 const rooms = {};
@@ -73,7 +85,7 @@ io.on("connection", (socket) => {
     if (!room) return socket.emit("err", "ไม่พบห้อง");
     if (room.status !== "waiting") return socket.emit("err", "เกมเริ่มไปแล้ว");
     const count = Object.keys(room.teams).length;
-    if (count >= 6) return socket.emit("err", "ทีมเต็มแล้ว");
+    if (count >= 35) return socket.emit("err", "ทีมเต็มแล้ว");
     const style = PALETTE[count % PALETTE.length];
     const tid = socket.id;
     room.teams[tid] = {
@@ -141,7 +153,7 @@ io.on("connection", (socket) => {
     t.log.unshift(`🎲 ทอยได้ ${roll} → จากช่องที่ ${oldPos} ไปช่องที่ ${newPos}`);
 
     // ส่งผลลูกเต๋ากลับให้ client ก่อน (เพื่อเล่น animation)
-    socket.emit("dice_result", { roll });
+    socket.emit("dice_result", { roll, oldPos, newPos });
 
     // ตรวจช่องคำถาม
     const q = QUESTIONS.find(q => q.step === newPos);
@@ -235,3 +247,4 @@ setInterval(() => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log("🚀 Server running on port", PORT));
+
