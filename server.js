@@ -141,50 +141,50 @@ io.on("connection", (socket) => {
     const room = rooms[code];
     if (!room || room.status !== "playing") return;
     const t = room.teams[socket.id];
-
-    // ❌ ห้ามทอยถ้ายังมีคำถามค้างหรือจบแล้ว
     if (!t || t.pendingQ || t.finished) return;
 
-    // server ทอยลูกเต๋า 1 ครั้งเท่านั้น
     const roll = Math.floor(Math.random() * 6) + 1;
     const oldPos = t.pos;
-    const newPos = Math.min(oldPos + roll, TOTAL);
+    const landPos = Math.min(oldPos + roll, TOTAL); // ช่องที่ลงก่อน trap/boost
 
-    t.log.unshift(`🎲 ทอยได้ ${roll} → จากช่องที่ ${oldPos} ไปช่องที่ ${newPos}`);
+    t.log.unshift(`🎲 ทอยได้ ${roll} → จากช่องที่ ${oldPos} ไปช่องที่ ${landPos}`);
 
-    // ส่งผลลูกเต๋ากลับให้ client ก่อน (เพื่อเล่น animation)
-    socket.emit("dice_result", { roll, oldPos, newPos });
-
-    // ตรวจช่องคำถาม
-    const q = QUESTIONS.find(q => q.step === newPos);
+    // ตรวจช่องคำถาม — finalPos = landPos (ยังไม่ขยับ)
+    const q = QUESTIONS.find(q => q.step === landPos);
     if (q) {
-      t.pos = newPos;
-      t.pendingQ = newPos;
-      t.log.unshift(`❓ เจอคำถามช่องที่ ${newPos}! ตอบก่อนทอยต่อ`);
+      t.pos = landPos;
+      t.pendingQ = landPos;
+      t.log.unshift(`❓ เจอคำถามช่องที่ ${landPos}! ตอบก่อนทอยต่อ`);
+      // ส่ง dice_result พร้อม finalPos = landPos
+      socket.emit("dice_result", { roll, oldPos, newPos: landPos, finalPos: landPos });
       broadcast(code);
       return;
     }
 
-    // ช่องปกติ
-    t.pos = newPos;
+    // ช่องปกติ — คำนวณ finalPos หลัง trap/boost
+    t.pos = landPos;
+    let finalPos = landPos;
 
-    if (TRAPS.has(newPos)) {
-      const back = Math.max(1, newPos - 2);
-      t.pos = back;
-      t.log.unshift(`💀 กับดัก! ถอยหลัง 2 → ช่องที่ ${back}`);
-    } else if (BOOSTS.has(newPos)) {
-      const fwd = Math.min(TOTAL, newPos + 2);
-      t.pos = fwd;
-      t.log.unshift(`⭐ บูสต์! เดินหน้า 2 → ช่องที่ ${fwd}`);
+    if (TRAPS.has(landPos)) {
+      finalPos = Math.max(1, landPos - 2);
+      t.pos = finalPos;
+      t.log.unshift(`🦈 กับดัก! ถอยหลัง 2 → ช่องที่ ${finalPos}`);
+    } else if (BOOSTS.has(landPos)) {
+      finalPos = Math.min(TOTAL, landPos + 2);
+      t.pos = finalPos;
+      t.log.unshift(`⚓ บูสต์! เดินหน้า 2 → ช่องที่ ${finalPos}`);
     }
 
     if (t.pos >= TOTAL) {
       t.pos = TOTAL;
+      finalPos = TOTAL;
       t.finished = true;
       t.finishedAt = Date.now();
       t.log.unshift("🏆 ถึงเป้าหมายแล้ว!");
     }
 
+    // ส่ง dice_result พร้อม finalPos จริง
+    socket.emit("dice_result", { roll, oldPos, newPos: landPos, finalPos });
     broadcast(code);
   });
 
